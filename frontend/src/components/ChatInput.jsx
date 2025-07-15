@@ -42,10 +42,10 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
   ];
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full px-2 sm:px-4 md:px-6 lg:px-0 max-w-4xl mx-auto">
       {/* Quick Prompts */}
       <motion.div 
-        className="flex flex-wrap gap-2 mb-4"
+        className="flex flex-wrap gap-2 mb-3 sm:mb-4 justify-center sm:justify-start"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -53,7 +53,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
         {quickPrompts.map((prompt, index) => (
           <motion.button
             key={prompt}
-            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             onClick={() => setInputValue(prompt + " ")}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -69,7 +69,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
 
       {/* Main Input Container */}
       <motion.div
-        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+        className="relative bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -79,39 +79,39 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
         }}
       >
         {/* Input Area */}
-        <div className="flex items-end p-4 space-x-3">
+        <div className="flex items-end p-2 sm:p-3 md:p-4 space-x-2 sm:space-x-3">
           {/* Action Buttons Left */}
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2">
             <motion.button
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={handleFileAttach}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               title="Attach file"
             >
-              <Paperclip size={18} />
+              <Paperclip size={16} className="sm:w-[18px] sm:h-[18px]" />
             </motion.button>
             
             <motion.button
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={handleEmojiPicker}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               title="Add emoji"
             >
-              <Smile size={18} />
+              <Smile size={16} className="sm:w-[18px] sm:h-[18px]" />
             </motion.button>
           </div>
 
           {/* Text Input */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-w-0">
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={onKeyPress}
               placeholder="Type your message here..."
-              className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base leading-6 max-h-32 min-h-[24px]"
+              className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base leading-5 sm:leading-6 max-h-32 min-h-[20px] sm:min-h-[24px]"
               rows={1}
               disabled={isLoading}
             />
@@ -119,7 +119,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
             {/* Character Counter */}
             {inputValue.length > 0 && (
               <motion.div
-                className="absolute bottom-0 right-0 text-xs text-gray-400 dark:text-gray-500"
+                className="absolute bottom-0 right-0 text-[10px] sm:text-xs text-gray-400 dark:text-gray-500"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
@@ -129,20 +129,20 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
           </div>
 
           {/* Action Buttons Right */}
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2">
             <motion.button
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={handleVoiceInput}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               title="Voice input"
             >
-              <Mic size={18} />
+              <Mic size={16} className="sm:w-[18px] sm:h-[18px]" />
             </motion.button>
 
             {/* Send Button */}
             <motion.button
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`p-1.5 sm:p-2 rounded-lg transition-all duration-200 ${
                 inputValue.trim() && !isLoading
                   ? 'bg-primary-600 text-grey hover:bg-primary-700 shadow-lg'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
@@ -158,27 +158,27 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 >
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full" />
                 </motion.div>
               ) : (
-                <Send size={18} />
+                <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
               )}
             </motion.button>
           </div>
         </div>
 
-        {/* Input Footer */}
+        {/* Input Footer - Hidden on small screens */}
         <motion.div 
-          className="px-4 pb-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
+          className="px-3 pb-2 sm:px-4 sm:pb-3 flex flex-col sm:flex-row items-center justify-between text-[10px] sm:text-xs text-gray-500 dark:text-gray-400"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="flex items-center space-x-4">
-            <span>AI-powered responses</span>
+          <div className="flex items-center space-x-2 sm:space-x-4 mb-1 sm:mb-0">
+            <span className="hidden xs:inline">AI-powered responses</span>
             <div className="flex items-center space-x-1">
               <motion.div
-                className="w-2 h-2 bg-success-500 rounded-full"
+                className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-success-500 rounded-full"
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
@@ -186,8 +186,8 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd>
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            <kbd className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-gray-100 dark:bg-gray-700 rounded text-[10px] sm:text-xs">Enter</kbd>
             <span>to send</span>
           </div>
         </motion.div>
@@ -205,7 +205,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-2 h-2 bg-primary-600 rounded-full"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary-600 rounded-full"
                     animate={{
                       scale: [1, 1.5, 1],
                       opacity: [0.5, 1, 0.5]
@@ -218,7 +218,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
                   />
                 ))}
               </div>
-              <span className="text-sm font-medium">Processing...</span>
+              <span className="text-xs sm:text-sm font-medium">Processing...</span>
             </div>
           </motion.div>
         )}
@@ -226,7 +226,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
 
       {/* Input Hints */}
       <motion.div 
-        className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400"
+        className="mt-2 sm:mt-3 text-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
@@ -240,4 +240,3 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
 };
 
 export default ChatInput;
-

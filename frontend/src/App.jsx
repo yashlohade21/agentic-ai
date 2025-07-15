@@ -29,6 +29,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -369,6 +370,7 @@ function App() {
         </div>
 
         <div className="header-right">
+          {/* Always visible user info */}
           <motion.div 
             className="user-info"
             initial={{ opacity: 0, x: 20 }}
@@ -379,44 +381,112 @@ function App() {
             <span>{user?.username}</span>
           </motion.div>
 
-          <motion.button
-            className="header-btn"
-            onClick={toggleDarkMode}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </motion.button>
+          {/* Desktop buttons - visible on larger screens */}
+          <div className="desktop-buttons">
+              <motion.button
+                    className="header-btn"
+                    onClick={toggleDarkMode}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  </motion.button>
 
-          <motion.button
-            className="header-btn"
-            onClick={() => setShowSidebar(!showSidebar)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <History size={20} />
-          </motion.button>
+                  <motion.button
+                    className="header-btn"
+                    onClick={() => setShowSidebar(!showSidebar)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <History size={20} />
+                  </motion.button>
 
-          <motion.button
-            className="header-btn"
-            onClick={() => setShowSettings(!showSettings)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={20} />
-          </motion.button>
+                  <motion.button
+                    className="header-btn"
+                    onClick={() => setShowSettings(!showSettings)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Settings size={20} />
+                  </motion.button>
 
+                  <motion.button
+                    className="header-btn logout-btn"
+                    onClick={handleLogout}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                <LogOut size={20} />
+                  </motion.button>
+          </div>
+
+          {/* Mobile menu button - visible on small screens */}
           <motion.button
-            className="header-btn logout-btn"
-            onClick={handleLogout}
+            className="mobile-menu-btn"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <LogOut size={20} />
+            <Menu size={20} />
           </motion.button>
         </div>
       </motion.header>
 
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {showMobileMenu && (
+          <motion.div
+            className="mobile-menu"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.button
+              className="mobile-menu-item"
+              onClick={() => {
+                toggleDarkMode();
+                setShowMobileMenu(false);
+              }}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            </motion.button>
+
+            <motion.button
+                className="mobile-menu-item"
+                onClick={() => setShowSettings(!showSettings)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Settings size={20} />
+                    <span>Settings</span>
+            </motion.button>
+
+            <motion.button
+              className="mobile-menu-item"
+              onClick={() => {
+                setShowSidebar(!showSidebar);
+                setShowMobileMenu(false);
+              }}
+            >
+              <History size={20} />
+              <span>History</span>
+            </motion.button>
+            
+            <motion.button
+              className="mobile-menu-item logout"
+              onClick={() => {
+                handleLogout();
+                setShowMobileMenu(false);
+              }}
+            >
+              <LogOut size={20} />
+              <span>Logout</span>
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="app-body">
         {/* Enhanced Sidebar */}
         <AnimatePresence>
@@ -648,6 +718,8 @@ function App() {
                   onRefresh={refreshSystem}
                   onClearHistory={clearHistory}
                   onLogout={handleLogout}
+                  onToggleDarkMode={toggleDarkMode}
+                  darkMode={darkMode}
                   isLoading={isLoading}
                 />
               </div>
@@ -660,4 +732,3 @@ function App() {
 }
 
 export default App;
-

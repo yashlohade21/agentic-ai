@@ -227,7 +227,7 @@ const AgentStatus = ({
         <motion.button
           onClick={onRefresh}
           disabled={isLoading}
-          className="w-full flex items-center justify-center space-x-2 p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 p-3 bg-primary-600 text-grey rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -237,7 +237,7 @@ const AgentStatus = ({
 
         <motion.button
           onClick={onClearHistory}
-          className="w-full flex items-center justify-center space-x-2 p-3 bg-warning-600 text-white rounded-lg hover:bg-warning-700 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 p-3 bg-warning-600 text-grey rounded-lg hover:bg-warning-700 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -247,7 +247,7 @@ const AgentStatus = ({
 
         <motion.button
           onClick={onLogout}
-          className="w-full flex items-center justify-center space-x-2 p-3 bg-error-600 text-white rounded-lg hover:bg-error-700 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 p-3 bg-error-600 text-grey rounded-lg hover:bg-error-700 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -269,10 +269,10 @@ const AgentStatus = ({
       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
         <div className="flex items-center space-x-4 mb-4">
           <div className="w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
-            <Users size={24} className="text-white" />
+            <Users size={24} className="text-grey" />
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-white">
+            <h4 className="font-semibold text-gray-900 dark:text-grey">
               {user?.username || 'User'}
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -332,41 +332,45 @@ const AgentStatus = ({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col p-4 max-w-4xl mx-auto w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
           <Activity size={20} className="mr-2 text-primary-600" />
-          System Dashboard
+          <span className="hidden sm:inline">System Dashboard</span>
+          <span className="sm:hidden">Dashboard</span>
         </h3>
         <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
           <Clock size={12} />
-          <span>Live</span>
+          <span className="hidden xs:inline">Live</span>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-        {tabs.map((tab) => (
-          <motion.button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <tab.icon size={16} />
-            <span>{tab.label}</span>
-          </motion.button>
-        ))}
+      <div className="flex mb-4 md:mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto">
+        <div className="flex space-x-1 min-w-max">
+          {tabs.map((tab) => (
+            <motion.button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <tab.icon size={16} />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.label.charAt(0)}</span>
+            </motion.button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -384,4 +388,3 @@ const AgentStatus = ({
 };
 
 export default AgentStatus;
-

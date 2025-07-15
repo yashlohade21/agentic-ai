@@ -18,12 +18,12 @@ const MessageRenderer = ({ message }) => {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(message.content);
-      toast.success('Message copied to clipboard', {
+      toast.success('Copied to clipboard', {
         icon: '📋',
         duration: 2000,
       });
     } catch (error) {
-      toast.error('Failed to copy message', {
+      toast.error('Failed to copy', {
         icon: '❌',
         duration: 2000,
       });
@@ -32,14 +32,14 @@ const MessageRenderer = ({ message }) => {
 
   const handleFeedback = (type) => {
     setFeedback(type);
-    toast.success(`Feedback recorded: ${type}`, {
+    toast.success(`Feedback: ${type}`, {
       icon: type === 'positive' ? '👍' : '👎',
       duration: 2000,
     });
   };
 
   const handleRegenerate = () => {
-    toast.success('Regenerating response...', {
+    toast('Regenerating...', {
       icon: '🔄',
       duration: 2000,
     });
@@ -48,15 +48,15 @@ const MessageRenderer = ({ message }) => {
   const getMessageIcon = () => {
     switch (message.type) {
       case 'user':
-        return <User size={18} className="text-grey" />;
+        return <User className="w-4 h-4 sm:w-5 sm:h-5 text-grey" />;
       case 'bot':
-        return <Bot size={18} className="text-primary-600" />;
+        return <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />;
       case 'system':
-        return <Sparkles size={18} className="text-warning-600" />;
+        return <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-warning-600" />;
       case 'error':
-        return <AlertCircle size={18} className="text-error-600" />;
+        return <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-error-600" />;
       default:
-        return <Bot size={18} className="text-primary-600" />;
+        return <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />;
     }
   };
 
@@ -84,51 +84,53 @@ const MessageRenderer = ({ message }) => {
 
   return (
     <motion.div
-      className={`flex ${message.type === 'user' ? 'justify-end' : message.type === 'system' ? 'justify-center' : 'justify-start'}`}
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      className={`flex ${message.type === 'user' ? 'justify-end' : message.type === 'system' ? 'justify-center' : 'justify-start'} px-2 sm:px-4`}
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setTimeout(() => setIsHovered(false), 1000)}
     >
-      <div className={`max-w-3xl w-full ${message.type === 'system' ? 'max-w-md' : ''}`}>
-        <div className={`rounded-2xl p-4 shadow-lg ${getMessageStyles()} relative group`}>
+      <div className={`w-full ${message.type === 'system' ? 'max-w-md' : 'max-w-3xl'}`}>
+        <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm sm:shadow-lg ${getMessageStyles()} relative group`}>
           {/* Message Header */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <motion.div
                 animate={{ rotate: message.type === 'bot' ? [0, 5, -5, 0] : 0 }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
                 {getMessageIcon()}
               </motion.div>
-              <span className={`text-sm font-medium ${
+              <span className={`text-xs sm:text-sm font-medium ${
                 message.type === 'user' ? 'text-grey' : 'text-gray-700 dark:text-gray-300'
               }`}>
                 {message.type === 'user' ? 'You' : 
-                 message.type === 'bot' ? 'AI Assistant' :
+                 message.type === 'bot' ? 'AI' :
                  message.type === 'system' ? 'System' : 'Error'}
               </span>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <div className={`flex items-center space-x-1 text-xs ${
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <div className={`flex items-center space-x-0.5 sm:space-x-1 text-[10px] sm:text-xs ${
                 message.type === 'user' ? 'text-grey/70' : 'text-gray-500 dark:text-gray-400'
               }`}>
-                <Clock size={12} />
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>{formatTimestamp(message.timestamp)}</span>
               </div>
             </div>
           </div>
 
           {/* Message Content */}
-          <div className={`prose prose-sm max-w-none text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+          <div className={`prose prose-xs sm:prose-sm max-w-none ${
             message.type === 'user' ? 'prose-invert' : 'dark:prose-invert'
           }`}>
             {message.type === 'error' ? (
-              <div className="flex items-start space-x-2">
-                <AlertCircle size={16} className="text-error-600 mt-0.5 flex-shrink-0" />
-                <div className="text-error-700 dark:text-error-300">
+              <div className="flex items-start space-x-1 sm:space-x-2">
+                <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-error-600 mt-0.5 flex-shrink-0" />
+                <div className="text-error-700 dark:text-error-300 text-xs sm:text-sm">
                   {message.content}
                 </div>
               </div>
@@ -140,42 +142,42 @@ const MessageRenderer = ({ message }) => {
                     const match = /language-(\w+)/.exec(className || '');
                     return !inline && match ? (
                       <div className="relative">
-                        <div className="flex items-center justify-between bg-gray-800 text-gray-300 px-4 py-2 text-xs rounded-t-lg">
+                        <div className="flex items-center justify-between bg-gray-800 text-gray-300 px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs rounded-t">
                           <span>{match[1]}</span>
                           <motion.button
-                            className="hover:bg-gray-700 p-1 rounded transition-colors"
+                            className="hover:bg-gray-700 p-0.5 sm:p-1 rounded transition-colors"
                             onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            <Copy size={12} />
+                            <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                           </motion.button>
                         </div>
                         <SyntaxHighlighter
                           style={oneDark}
                           language={match[1]}
                           PreTag="div"
-                          className="rounded-t-none"
+                          className="text-xs sm:text-sm rounded-t-none"
                           {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       </div>
                     ) : (
-                      <code className={`${className} bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm`} {...props}>
+                      <code className={`${className} bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs sm:text-sm`} {...props}>
                         {children}
                       </code>
                     );
                   },
                   table: ({ children }) => (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs sm:text-sm">
                         {children}
                       </table>
                     </div>
                   ),
                   blockquote: ({ children }) => (
-                    <blockquote className="border-l-4 border-primary-500 pl-4 italic text-gray-600 dark:text-gray-400">
+                    <blockquote className="border-l-2 sm:border-l-4 border-primary-500 pl-2 sm:pl-4 italic text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
                       {children}
                     </blockquote>
                   ),
@@ -190,15 +192,15 @@ const MessageRenderer = ({ message }) => {
           <AnimatePresence>
             {(isHovered || feedback) && message.type !== 'system' && (
               <motion.div
-                className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200/50 dark:border-gray-700/50"
-                initial={{ opacity: 0, y: 10 }}
+                className="flex items-center justify-between mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200/50 dark:border-gray-700/50"
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, y: 5 }}
+                transition={{ duration: 0.15 }}
               >
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <motion.button
-                    className={`p-1.5 rounded-lg transition-colors ${
+                    className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${
                       message.type === 'user' 
                         ? 'hover:bg-grey/20 text-grey/70 hover:text-grey' 
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -208,13 +210,13 @@ const MessageRenderer = ({ message }) => {
                     whileTap={{ scale: 0.9 }}
                     title="Copy message"
                   >
-                    <Copy size={14} />
+                    <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                   </motion.button>
 
                   {message.type === 'bot' && (
                     <>
                       <motion.button
-                        className={`p-1.5 rounded-lg transition-colors ${
+                        className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${
                           feedback === 'positive' 
                             ? 'bg-success-100 text-success-600' 
                             : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -224,11 +226,11 @@ const MessageRenderer = ({ message }) => {
                         whileTap={{ scale: 0.9 }}
                         title="Good response"
                       >
-                        <ThumbsUp size={14} />
+                        <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4" />
                       </motion.button>
 
                       <motion.button
-                        className={`p-1.5 rounded-lg transition-colors ${
+                        className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${
                           feedback === 'negative' 
                             ? 'bg-error-100 text-error-600' 
                             : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -238,26 +240,26 @@ const MessageRenderer = ({ message }) => {
                         whileTap={{ scale: 0.9 }}
                         title="Poor response"
                       >
-                        <ThumbsDown size={14} />
+                        <ThumbsDown className="w-3 h-3 sm:w-4 sm:h-4" />
                       </motion.button>
 
                       <motion.button
-                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                        className="p-1 sm:p-1.5 rounded-md sm:rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                         onClick={handleRegenerate}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         title="Regenerate response"
                       >
-                        <RotateCcw size={14} />
+                        <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
                       </motion.button>
                     </>
                   )}
                 </div>
 
                 {message.metadata && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                     {message.metadata.agent && (
-                      <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                      <span className="bg-gray-100 dark:bg-gray-700 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
                         {message.metadata.agent}
                       </span>
                     )}
@@ -270,12 +272,12 @@ const MessageRenderer = ({ message }) => {
           {/* Message Status Indicator */}
           {message.type === 'bot' && (
             <motion.div
-              className="absolute -bottom-1 -right-1 w-6 h-6 bg-success-500 rounded-full flex items-center justify-center"
+              className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-success-500 rounded-full flex items-center justify-center"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, type: "spring", stiffness: 500 }}
             >
-              <CheckCircle size={12} className="text-grey" />
+              <CheckCircle className="w-2 h-2 sm:w-3 sm:h-3 text-grey" />
             </motion.div>
           )}
         </div>
@@ -285,4 +287,3 @@ const MessageRenderer = ({ message }) => {
 };
 
 export default MessageRenderer;
-

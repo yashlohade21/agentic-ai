@@ -113,13 +113,13 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-primary-600 to-secondary-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-primary-600 to-secondary-600 flex items-center justify-center p-4 sm:p-6">
       {/* Background Animation */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-white/10 rounded-full"
+            className="absolute w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/10 rounded-full"
             animate={{
               x: [0, Math.random() * 100 - 50],
               y: [0, Math.random() * 100 - 50],
@@ -139,20 +139,20 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
       </div>
 
       <motion.div
-        className="w-full max-w-md"
+        className="w-full max-w-xs sm:max-w-sm md:max-w-md"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         {/* Card */}
         <motion.div
-          className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20"
+          className="bg-white/10 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/20"
           variants={itemVariants}
         >
           {/* Header */}
-          <motion.div className="text-center mb-8" variants={itemVariants}>
+          <motion.div className="text-center mb-6 sm:mb-8" variants={itemVariants}>
             <motion.div
-              className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4"
+              className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-full mb-3 sm:mb-4"
               animate={{ 
                 rotate: [0, 5, -5, 0],
                 scale: [1, 1.1, 1]
@@ -163,17 +163,17 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
                 ease: "easeInOut"
               }}
             >
-              <Bot size={32} className="text-white" />
+              <Bot size={24} className="sm:w-8 sm:h-8 text-white" />
             </motion.div>
             
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
               BinaryBrained AI
             </h1>
             
             <AnimatePresence mode="wait">
               <motion.p
                 key={isLoginMode ? 'login' : 'register'}
-                className="text-white/80"
+                className="text-white/80 text-sm sm:text-base"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -185,24 +185,24 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
           </motion.div>
 
           {/* Form */}
-          <motion.form onSubmit={handleSubmit} className="space-y-6" variants={itemVariants}>
+          <motion.form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" variants={itemVariants}>
             {/* Username Field */}
             <motion.div variants={itemVariants}>
-              <label className="block text-white/90 text-sm font-medium mb-2">
+              <label className="block text-white/90 text-xs sm:text-sm font-medium mb-1 sm:mb-2">
                 Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User size={18} className="text-white/60" />
+                  <User size={16} className="sm:w-[18px] sm:h-[18px] text-white/60" />
                 </div>
                 <motion.input
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-white/10 border ${
+                  className={`w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border ${
                     errors.username ? 'border-red-400' : 'border-white/30'
-                  } rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200`}
+                  } rounded-lg sm:rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 text-sm sm:text-base`}
                   placeholder="Enter your username"
                   whileFocus={{ scale: 1.02 }}
                 />
@@ -210,7 +210,7 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
               <AnimatePresence>
                 {errors.username && (
                   <motion.p
-                    className="text-red-300 text-sm mt-1"
+                    className="text-red-300 text-xs sm:text-sm mt-1"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -230,21 +230,21 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <label className="block text-white/90 text-sm font-medium mb-2">
+                  <label className="block text-white/90 text-xs sm:text-sm font-medium mb-1 sm:mb-2">
                     Email
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail size={18} className="text-white/60" />
+                      <Mail size={16} className="sm:w-[18px] sm:h-[18px] text-white/60" />
                     </div>
                     <motion.input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 bg-white/10 border ${
+                      className={`w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border ${
                         errors.email ? 'border-red-400' : 'border-white/30'
-                      } rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200`}
+                      } rounded-lg sm:rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 text-sm sm:text-base`}
                       placeholder="Enter your email"
                       whileFocus={{ scale: 1.02 }}
                     />
@@ -252,7 +252,7 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
                   <AnimatePresence>
                     {errors.email && (
                       <motion.p
-                        className="text-red-300 text-sm mt-1"
+                        className="text-red-300 text-xs sm:text-sm mt-1"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
@@ -267,21 +267,21 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
 
             {/* Password Field */}
             <motion.div variants={itemVariants}>
-              <label className="block text-white/90 text-sm font-medium mb-2">
+              <label className="block text-white/90 text-xs sm:text-sm font-medium mb-1 sm:mb-2">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock size={18} className="text-white/60" />
+                  <Lock size={16} className="sm:w-[18px] sm:h-[18px] text-white/60" />
                 </div>
                 <motion.input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-12 py-3 bg-white/10 border ${
+                  className={`w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 bg-white/10 border ${
                     errors.password ? 'border-red-400' : 'border-white/30'
-                  } rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200`}
+                  } rounded-lg sm:rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 text-sm sm:text-base`}
                   placeholder="Enter your password"
                   whileFocus={{ scale: 1.02 }}
                 />
@@ -293,16 +293,16 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
                   whileTap={{ scale: 0.9 }}
                 >
                   {showPassword ? (
-                    <EyeOff size={18} className="text-white/60" />
+                    <EyeOff size={16} className="sm:w-[18px] sm:h-[18px] text-white/60" />
                   ) : (
-                    <Eye size={18} className="text-white/60" />
+                    <Eye size={16} className="sm:w-[18px] sm:h-[18px] text-white/60" />
                   )}
                 </motion.button>
               </div>
               <AnimatePresence>
                 {errors.password && (
                   <motion.p
-                    className="text-red-300 text-sm mt-1"
+                    className="text-red-300 text-xs sm:text-sm mt-1"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -317,7 +317,7 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
             <motion.button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-white/20 hover:bg-white/30 disabled:bg-white/10 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/30"
+              className="w-full bg-white/20 hover:bg-white/30 disabled:bg-white/10 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg sm:rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 backdrop-blur-sm border border-white/30 text-sm sm:text-base"
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -328,13 +328,13 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   >
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full" />
                   </motion.div>
                   <span>Processing...</span>
                 </>
               ) : (
                 <>
-                  {isLoginMode ? <Shield size={20} /> : <Sparkles size={20} />}
+                  {isLoginMode ? <Shield size={18} className="sm:w-5 sm:h-5" /> : <Sparkles size={18} className="sm:w-5 sm:h-5" />}
                   <span>{isLoginMode ? 'Sign In' : 'Create Account'}</span>
                 </>
               )}
@@ -342,14 +342,14 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
           </motion.form>
 
           {/* Toggle Mode */}
-          <motion.div className="mt-6 text-center" variants={itemVariants}>
-            <p className="text-white/80 text-sm">
+          <motion.div className="mt-4 sm:mt-6 text-center" variants={itemVariants}>
+            <p className="text-white/80 text-xs sm:text-sm">
               {isLoginMode ? "Don't have an account?" : "Already have an account?"}
             </p>
             <motion.button
               type="button"
               onClick={toggleMode}
-              className="text-white font-semibold hover:text-white/80 transition-colors mt-1"
+              className="text-white font-semibold hover:text-white/80 transition-colors mt-1 text-sm sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -359,7 +359,7 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
 
           {/* Footer */}
           <motion.div 
-            className="mt-8 pt-6 border-t border-white/20 text-center"
+            className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/20 text-center"
             variants={itemVariants}
           >
             <p className="text-white/60 text-xs">
@@ -373,4 +373,3 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
 };
 
 export default AuthForm;
-
