@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime
 # Removed unused langchain imports that were causing import issues
-from core.llm_manager import LLMManager, OllamaProvider, HuggingFaceProvider, GeminiProvider, BinaryBrainedProvider
+from core.llm_manager import LLMManager, OllamaProvider, HuggingFaceProvider, GeminiProvider, BinaryBrainedProvider, MistralProvider
 import os
 
 class AgentMessage(BaseModel):
@@ -53,10 +53,10 @@ class BaseAgent(ABC):
                         api_key=settings.binarybrained_api_key,
                         model_name="llama3-8b-8192"
                     ))
-                elif provider_name == "huggingface" and settings.huggingface_api_token:
-                    providers.append(HuggingFaceProvider(
-                        api_token=settings.huggingface_api_token,
-                        model_name="microsoft/DialoGPT-medium"
+                elif provider_name == "mistral" and settings.mistral_api_key:
+                    providers.append(MistralProvider(
+                        api_key=settings.mistral_api_key,
+                        model_name="mistral-large-latest"
                     ))
                 elif provider_name == "gemini" and settings.google_api_key:
                     providers.append(GeminiProvider(

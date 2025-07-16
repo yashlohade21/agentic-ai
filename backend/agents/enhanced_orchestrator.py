@@ -42,6 +42,7 @@ You are like a senior technical lead who understands how to break down complex r
 - **planner**: Creates detailed execution plans for complex tasks
 - **reviewer**: Provides thorough code and solution reviews
 - **thinker**: Performs deep analysis and problem-solving
+- **image_generation**: Creates images, diagrams, logos, and visual content
 
 **Enhanced Workflow:**
 1. **Analyze Request**: Understand what the user really needs
@@ -136,11 +137,11 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
         
         Respond in JSON format:
         {{
-            "type": "coding|debugging|explanation|review|other",
+            "type": "coding|debugging|explanation|review|image_generation|architecture|other",
             "complexity": "simple|moderate|complex",
             "requires_context": true|false,
             "approach": "single|multi|iterative",
-            "deliverables": ["code", "explanation", "examples", "tests"]
+            "deliverables": ["code", "explanation", "examples", "tests", "images", "diagrams"]
         }}
         """
         
@@ -194,7 +195,18 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
     
     async def _create_enhanced_plan(self, request: str, context: Dict[str, Any], analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Create an enhanced execution plan"""
-        if analysis.get('approach') == 'single' and analysis.get('type') == 'coding':
+        request_type = analysis.get('type', 'other')
+        
+        if request_type == 'image_generation':
+            # Direct to image generation agent
+            return [{
+                "id": "image_generation",
+                "agent": "image_generation",
+                "task": request,
+                "context": context,
+                "priority": 1
+            }]
+        elif analysis.get('approach') == 'single' and request_type == 'coding':
             # Direct to enhanced coder with full context
             return [{
                 "id": "enhanced_coding",
@@ -203,6 +215,29 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
                 "context": context,
                 "priority": 1
             }]
+        elif request_type == 'architecture':
+            # Architecture design with potential image generation
+            plan = [{
+                "id": "architecture_design",
+                "agent": "enhanced_coder",
+                "task": request,
+                "context": context,
+                "priority": 1,
+                "request_type": "architecture"
+            }]
+            
+            # Add image generation for diagrams if needed
+            if 'diagram' in request.lower() or 'visual' in request.lower():
+                plan.append({
+                    "id": "architecture_diagram",
+                    "agent": "image_generation",
+                    "task": f"Create architectural diagram for: {request}",
+                    "context": context,
+                    "priority": 2,
+                    "type": "diagram"
+                })
+            
+            return plan
         
         # For complex requests, use planner
         if 'planner' in self.agents:

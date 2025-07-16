@@ -13,7 +13,7 @@ class Config:
         self.openai_api_key: Optional[str] = os.getenv('OPENAI_API_KEY')
         self.anthropic_api_key: Optional[str] = os.getenv('ANTHROPIC_API_KEY')
         self.binarybrained_api_key: Optional[str] = os.getenv('BINARYBRAINED_API_KEY')
-        
+        self.mistral_api_key: Optional[str] = os.getenv('MISTRAL_API_KEY')       
         # Free LLM API Keys
         self.huggingface_api_token: Optional[str] = os.getenv('HUGGINGFACE_API_TOKEN')
         self.google_api_key: Optional[str] = os.getenv('GOOGLE_API_KEY')
@@ -24,7 +24,7 @@ class Config:
         
         # LLM Provider Priority (first available will be used) - BinaryBrained prioritized
         
-        self.llm_providers: List[str] = ["binarybrained", "ollama", "huggingface", "gemini"]
+        self.llm_providers: List[str] = ["binarybrained", "mistral", "ollama", "huggingface", "gemini"]
         
         # System Settings
         self.max_concurrent_agents: int = int(os.getenv('MAX_CONCURRENT_AGENTS', '3'))

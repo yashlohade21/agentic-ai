@@ -112,19 +112,26 @@ Remember: You're not just generating code - you're mentoring and teaching throug
             existing_code = message.content.get('existing_code', '')
             file_path = message.content.get('file_path', '')
             project_files = message.content.get('project_files', [])
+            request_type = message.content.get('request_type', 'general')
             
             self.logger.info(f"Enhanced coding task: {task}")
             
             # Build comprehensive context
             context = await self._build_comprehensive_context(task, language, existing_code, file_path, project_files)
             
-            # Generate enhanced response
-            result = await self._generate_enhanced_response(task, context)
+            # Determine the type of request and generate appropriate response
+            if request_type == 'architecture' or 'architecture' in task.lower() or 'design' in task.lower():
+                result = await self.generate_architecture_suggestion(task, context)
+            elif request_type == 'advanced_code' or 'suggest' in task.lower() or 'recommend' in task.lower():
+                result = await self.generate_advanced_code_suggestions(task, context)
+            else:
+                # Generate enhanced response (existing functionality)
+                result = await self._generate_enhanced_response(task, context)
             
             # Add to conversation history
             self.conversation_history.add_interaction(
                 user_request=task,
-                agent_response=result.get('response', ''),
+                agent_response=result.get('response', result.get('architecture_design', result.get('advanced_suggestions', ''))),
                 context=context
             )
             
@@ -133,8 +140,9 @@ Remember: You're not just generating code - you're mentoring and teaching throug
                 data=result,
                 metadata={
                     "language": language,
-                    "task_type": "enhanced_coding",
-                    "context_used": True
+                    "task_type": result.get('type', 'enhanced_coding'),
+                    "context_used": True,
+                    "request_type": request_type
                 }
             )
             
@@ -339,3 +347,202 @@ Structure your response with clear markdown sections using the headers above.
         """
         
         return await self.call_llm(summary_prompt)
+
+    async def generate_architecture_suggestion(self, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate project architecture suggestions using Mistral"""
+        architecture_prompt = f"""
+        **Architecture Design Task:** {task}
+        
+        **Project Context:**
+        {context.get('conversation_history', '')}
+        
+        **Existing Code Context:**
+        {context.get('existing_code', 'No existing code provided')}
+        
+        **Project Files:**
+        {self._format_project_files(context.get('project_files', {}))}
+        
+        As an expert software architect, provide a comprehensive architecture design that includes:
+        
+        ## 1. High-Level Architecture Overview
+        - System architecture pattern (e.g., MVC, microservices, layered)
+        - Key components and their responsibilities
+        - Data flow and interaction patterns
+        
+        ## 2. Technology Stack Recommendations
+        - Programming languages and frameworks
+        - Database choices and rationale
+        - Infrastructure and deployment considerations
+        
+        ## 3. Component Design
+        - Detailed breakdown of major components
+        - Interface definitions and APIs
+        - Data models and schemas
+        
+        ## 4. Implementation Strategy
+        - Development phases and priorities
+        - Risk assessment and mitigation
+        - Testing and quality assurance approach
+        
+        ## 5. Scalability and Performance Considerations
+        - Performance bottlenecks and solutions
+        - Scalability patterns and strategies
+        - Monitoring and observability
+        
+        ## 6. Security Architecture
+        - Authentication and authorization
+        - Data protection and encryption
+        - Security best practices
+        
+        Provide detailed explanations for each architectural decision and consider the specific requirements and constraints mentioned in the task.
+        """
+        
+        try:
+            architecture_response = await self.call_llm(architecture_prompt, context)
+            
+            return {
+                "architecture_design": architecture_response,
+                "task": task,
+                "type": "architecture_suggestion",
+                "context_used": True,
+                "recommendations": self._extract_recommendations(architecture_response)
+            }
+        except Exception as e:
+            self.logger.error(f"Architecture generation failed: {e}")
+            return {
+                "error": f"Failed to generate architecture: {str(e)}",
+                "task": task,
+                "type": "architecture_suggestion"
+            }
+    
+    async def generate_advanced_code_suggestions(self, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate advanced code suggestions with architectural awareness"""
+        code_suggestion_prompt = f"""
+        **Advanced Code Suggestion Task:** {task}
+        
+        **Language:** {context.get('language', 'python')}
+        
+        **Project Context:**
+        {context.get('conversation_history', '')}
+        
+        **Existing Codebase:**
+        {context.get('existing_code', 'No existing code provided')}
+        
+        **Related Project Files:**
+        {self._format_project_files(context.get('project_files', {}))}
+        
+        As an expert software engineer with deep architectural knowledge, provide advanced code suggestions that include:
+        
+        ## 1. Code Solution
+        - Clean, production-ready code
+        - Proper error handling and edge cases
+        - Performance optimizations where applicable
+        - Security considerations
+        
+        ## 2. Architectural Integration
+        - How this code fits into the overall system architecture
+        - Design patterns and principles applied
+        - Dependencies and coupling considerations
+        - Interface design and API contracts
+        
+        ## 3. Code Quality Enhancements
+        - SOLID principles application
+        - Code organization and modularity
+        - Testing strategies and test cases
+        - Documentation and comments
+        
+        ## 4. Alternative Approaches
+        - Different implementation strategies
+        - Trade-offs and decision rationale
+        - Performance vs. maintainability considerations
+        - Future extensibility options
+        
+        ## 5. Integration Guidelines
+        - How to integrate with existing codebase
+        - Migration strategies if applicable
+        - Backward compatibility considerations
+        - Deployment and rollout recommendations
+        
+        ## 6. Best Practices and Recommendations
+        - Industry best practices
+        - Framework-specific recommendations
+        - Performance monitoring and optimization
+        - Maintenance and support considerations
+        
+        Ensure the code is production-ready, well-documented, and follows the established patterns in the existing codebase.
+        """
+        
+        try:
+            code_response = await self.call_llm(code_suggestion_prompt, context)
+            
+            # Extract code blocks from the response
+            code_blocks = re.findall(r'```(?:\w+)?\n(.*?)\n```', code_response, re.DOTALL)
+            main_code = code_blocks[0] if code_blocks else ""
+            
+            # Validate the generated code
+            is_valid, validation_error = self.validate_code(main_code, context.get('language', 'python'))
+            
+            return {
+                "advanced_suggestions": code_response,
+                "code": main_code,
+                "is_valid": is_valid,
+                "validation_error": validation_error,
+                "task": task,
+                "type": "advanced_code_suggestion",
+                "context_used": True,
+                "alternatives": self._extract_alternatives(code_response)
+            }
+        except Exception as e:
+            self.logger.error(f"Advanced code suggestion failed: {e}")
+            return {
+                "error": f"Failed to generate advanced code suggestions: {str(e)}",
+                "task": task,
+                "type": "advanced_code_suggestion"
+            }
+    
+    def _format_project_files(self, project_files: Dict[str, str]) -> str:
+        """Format project files for context"""
+        if not project_files:
+            return "No project files provided"
+        
+        formatted = []
+        for file_path, content in project_files.items():
+            formatted.append(f"**File: {file_path}**")
+            formatted.append(f"```\n{content[:1000]}{'...' if len(content) > 1000 else ''}\n```")
+        
+        return "\n\n".join(formatted)
+    
+    def _extract_recommendations(self, response: str) -> List[str]:
+        """Extract key recommendations from architecture response"""
+        recommendations = []
+        lines = response.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('- ') or line.startswith('* '):
+                recommendations.append(line[2:])
+            elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. '):
+                recommendations.append(line[3:])
+        
+        return recommendations[:10]  # Limit to top 10 recommendations
+    
+    def _extract_alternatives(self, response: str) -> List[str]:
+        """Extract alternative approaches from code suggestion response"""
+        alternatives = []
+        
+        # Look for sections that mention alternatives
+        alt_section = re.search(r'(?:Alternative|Different|Other).*?Approaches?.*?\n(.*?)(?:\n##|\n#|$)', response, re.DOTALL | re.IGNORECASE)
+        
+        if alt_section:
+            alt_text = alt_section.group(1)
+            lines = alt_text.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                if line.startswith('- ') or line.startswith('* '):
+                    alternatives.append(line[2:])
+                elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. '):
+                    alternatives.append(line[3:])
+        
+        return alternatives[:5]  # Limit to top 5 alternatives
+

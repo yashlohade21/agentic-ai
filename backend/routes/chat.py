@@ -162,4 +162,3 @@ def chat():
         # This is a final catch-all for any unexpected errors in the endpoint itself.
         logging.error(f"Critical error in /chat endpoint for user_id {user_id}: {e}", exc_info=True)
         return jsonify({'error': 'A critical internal server error occurred.'}), 500
-

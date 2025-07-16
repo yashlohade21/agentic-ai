@@ -20,6 +20,7 @@ from agents.researcher import ResearcherAgent
 from agents.file_picker import FilePickerAgent
 from agents.reviewer import ReviewerAgent
 from agents.thinker import ThinkerAgent
+from agents.image_agent import ImageGenerationAgent
 from agents.base_agent import AgentMessage
 from core.config import settings
 
@@ -66,7 +67,8 @@ class BinarybrainedSystem:
                 'researcher': ResearcherAgent(),
                 'file_picker': FilePickerAgent(),
                 'reviewer': ReviewerAgent(),
-                'thinker': ThinkerAgent()
+                'thinker': ThinkerAgent(),
+                'image_generation': ImageGenerationAgent()
             }
             # Register agents with orchestrator
             for agent in self.agents.values():

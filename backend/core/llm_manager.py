@@ -260,3 +260,62 @@ class LLMManager:
             "total_providers": len(self.providers),
             "available_providers": len(self.get_available_providers())
         }
+
+
+class MistralProvider(LLMProvider):
+    """Mistral AI provider"""
+    
+    def __init__(self, api_key: str = None, model_name: str = "mistral-large-latest", **kwargs):
+        super().__init__("mistral", **kwargs)
+        self.api_key = api_key
+        self.model_name = model_name
+        self.api_url = "https://api.mistral.ai/v1/chat/completions"
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        } if api_key else {}
+        
+        if not api_key:
+            self.available = False
+            logger.warning("Mistral API key not provided")
+    
+    async def generate(self, prompt: str, system_prompt: str = None) -> str:
+        if not self.available or not self.api_key:
+            raise Exception("Mistral provider not available or API key missing")
+        
+        try:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 1024
+            }
+            
+            response = await asyncio.to_thread(
+                requests.post,
+                self.api_url,
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'choices' in result and len(result['choices']) > 0:
+                    self.reset_errors()
+                    return result['choices'][0]['message']['content']
+                else:
+                    raise Exception(f"Invalid response format: {result}")
+            else:
+                raise Exception(f"API error: {response.status_code} - {response.text}")
+                
+        except Exception as e:
+            self.mark_error()
+            raise Exception(f"Mistral generation failed: {e}")
+
+
