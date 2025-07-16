@@ -131,8 +131,8 @@ def get_status():
 def chat():
     """Main endpoint to handle incoming chat messages."""
     # This check should be handled by a proper auth decorator in a real app
-    if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
+    # if 'user_id' not in session:
+    #     return jsonify({'error': 'Authentication required'}), 401
         
     data = request.get_json()
     if not data or 'message' not in data:
