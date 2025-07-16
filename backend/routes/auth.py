@@ -179,12 +179,12 @@ def check_auth():
     except Exception as e:
         return jsonify({'error': f'Auth check failed: {str(e)}'}), 500
 
-# def require_auth(f):
-#     """Decorator to require authentication"""
-#     def decorated_function(*args, **kwargs):
-#         if 'user_id' not in session:
-            # return jsonify({'error': 'Authentication required'}), 401
-#         return f(*args, **kwargs)
-#     decorated_function.__name__ = f.__name__
-#     return decorated_function
+def require_auth(f):
+    """Decorator to require authentication"""
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
 
