@@ -8,7 +8,7 @@ from flask import Blueprint
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))
 
 try:
-    from core.llm_manager import LLMManager, BinaryBrainedProvider, GeminiProvider, HuggingFaceProvider
+    from core.llm_manager import LLMManager, BinaryBrainedProvider, GeminiProvider, HuggingFaceProvider, MistralProvider
     from core.config import settings
 except ImportError as e:
     print(f'Warning: Could not import LLM components: {e}')
@@ -16,6 +16,7 @@ except ImportError as e:
     BinaryBrainedProvider = None
     GeminiProvider = None
     HuggingFaceProvider = None
+    MistralProvider = None
     settings = None
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,19 @@ class LLMConfig:
                 except Exception as e:
                     logger.warning(f"Failed to initialize BinaryBrained provider: {e}")
             
+            # Try to initialize Mistral provider
+            mistral_api_key = os.getenv('MISTRAL_API_KEY')
+            if mistral_api_key:
+                try:
+                    provider = MistralProvider(
+                        api_key=mistral_api_key,
+                        model_name="mistral-large-latest"
+                    )
+                    providers.append(provider)
+                    logger.info("Mistral provider initialized")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize Mistral provider: {e}")
+            
             # Try to initialize Gemini provider
             google_api_key = os.getenv('GOOGLE_API_KEY')
             if google_api_key:
@@ -79,9 +93,9 @@ class LLMConfig:
                     logger.warning(f"Failed to initialize HuggingFace provider: {e}")
             
             if not providers:
-                # Create a fallback mock provider for testing
-                logger.warning("No API keys found, creating mock provider for testing")
-                providers.append(MockProvider())
+                # No mock fallback - require real API keys
+                logger.error("No API keys found! Please configure BINARYBRAINED_API_KEY or MISTRAL_API_KEY in .env file")
+                raise Exception("No LLM providers available. Please configure API keys in .env file.")
             
             self.llm_manager = LLMManager(providers)
             self.initialized = True
@@ -98,24 +112,7 @@ class LLMConfig:
             self.initialize()
         return self.llm_manager
 
-class MockProvider:
-    """Mock provider for testing when no API keys are available"""
-    
-    def __init__(self):
-        self.name = "mock"
-        self.available = True
-        self.error_count = 0
-        self.max_errors = 3
-    
-    async def generate(self, prompt: str, system_prompt: str = None) -> str:
-        """Generate a mock response"""
-        return f"This is a mock response to: {prompt[:50]}... (Mock AI is working! Please configure API keys for real AI responses.)"
-    
-    def mark_error(self):
-        self.error_count += 1
-    
-    def reset_errors(self):
-        self.error_count = 0
+# MockProvider removed - system now requires real API keys
 
 # Global LLM configuration instance
 llm_config = LLMConfig()
