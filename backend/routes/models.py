@@ -18,5 +18,6 @@ class ChatMessage(Base):
     content = Column(Text, nullable=False)
     timestamp = Column(DateTime, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
+    sender = Column(String, nullable=False)  # Added sender field
     
     user = relationship("User", back_populates="messages")

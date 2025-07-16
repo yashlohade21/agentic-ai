@@ -25,9 +25,9 @@ engine = create_engine(
 try:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
-    print("✅ Successfully connected to SQLite database")
+    print("Successfully connected to SQLite database")
 except Exception as e:
-    print(f"❌ Failed to connect to SQLite: {e}")
+    print(f"Failed to connect to SQLite: {e}")
     raise
 
 # Session factory

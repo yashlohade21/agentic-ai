@@ -44,7 +44,13 @@ class Config:
     
     def _load_env_file(self):
         """Load environment variables from .env file if it exists"""
-        env_file = Path('.env')
+        # Check both project root and backend directory
+        env_files = [Path('.env'), Path('backend/.env')]
+        env_file = None
+        for ef in env_files:
+            if ef.exists():
+                env_file = ef
+                break
         if env_file.exists():
             try:
                 with open(env_file, 'r', encoding='utf-8') as f:

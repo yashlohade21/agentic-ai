@@ -41,7 +41,7 @@ class LLMConfig:
             providers = []
             
             # Try to initialize BinaryBrained provider (Groq API)
-            groq_api_key = os.getenv('GROQ_API_KEY') or os.getenv('BINARYBRAINED_API_KEY')
+            groq_api_key = os.getenv('BINARYBRAINED_API_KEY') or os.getenv('GROQ_API_KEY')
             if groq_api_key:
                 try:
                     provider = BinaryBrainedProvider(
