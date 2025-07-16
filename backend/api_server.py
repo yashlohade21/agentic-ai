@@ -1,25 +1,24 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
+# main.py (FastAPI implementation)
+from fastapi import FastAPI, HTTPException, Request, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 import uvicorn
-from main import BinarybrainedSystem
-import asyncio
-import logging
-from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from typing import Optional
+import secrets
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
-# Mock user database (replace with real DB in production)
-fake_users_db = {
-    "testuser": {
-        "username": "testuser",
-        "email": "test@example.com",
-        "hashed_password": "fakehashedsecret",
-        "disabled": False,
-    }
-}
+# Security setup
+SECRET_KEY = secrets.token_urlsafe(32)
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+# User model
 class User(BaseModel):
     username: str
     email: Optional[str] = None
@@ -35,92 +34,107 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+# Database simulation (replace with real DB)
+fake_users_db = {
+    "testuser": {
+        "username": "testuser",
+        "email": "test@example.com",
+        "hashed_password": pwd_context.hash("testpassword"),
+        "disabled": False,
+    }
+}
 
-def fake_hash_password(password: str):
-    return "fakehashed" + password
+app = FastAPI()
+
+# Enhanced CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://ai-agent-with-frontend.onrender.com",
+        "https://ai-agent-zeta-bice.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Auth utilities
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_user(db, username: str):
     if username in db:
         user_dict = db[username]
         return UserInDB(**user_dict)
 
-def fake_decode_token(token):
-    user = get_user(fake_users_db, token)
+def authenticate_user(fake_db, username: str, password: str):
+    user = get_user(fake_db, username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
     return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = fake_decode_token(token)
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    
+    user = get_user(fake_users_db, username=token_data.username)
+    if user is None:
+        raise credentials_exception
     return user
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    app.state.system = BinarybrainedSystem()
-    await app.state.system.initialize()
-    logging.info("Binarybrained system initialized and ready")
-    yield
-    # Shutdown
-    # Add any cleanup code here
-
-app = FastAPI(title="Binarybrained AI API", lifespan=lifespan)
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Authentication endpoints
-@app.post("/api/auth/register")
-async def register(user_data: dict):
-    # In a real app, you would:
-    # 1. Validate input
-    # 2. Hash password
-    # 3. Store in database
-    return {"message": "User registered successfully", "user": user_data}
-
-@app.post("/api/auth/login")
+# Auth endpoints
+@app.post("/api/auth/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user_dict = fake_users_db.get(form_data.username)
-    if not user_dict:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    user = UserInDB(**user_dict)
-    hashed_password = fake_hash_password(form_data.password)
-    if not hashed_password == user.hashed_password:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    return {"access_token": user.username, "token_type": "bearer"}
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/api/auth/check-auth")
 async def check_auth(current_user: User = Depends(get_current_user)):
     return {"authenticated": True, "user": current_user}
 
-@app.post("/api/auth/logout")
-async def logout():
-    return {"message": "Successfully logged out"}
-
-# Existing endpoints
-@app.get("/api/health")
-async def health_check():
-    return {"status": "ok", "message": "Binarybrained AI is running"}
-
-@app.get("/api/chat/status")
-async def get_system_status():
-    status = app.state.system.get_system_status()
-    return JSONResponse(status)
-
+# Protected endpoints
 @app.post("/api/chat")
-async def process_chat_message(request: Request):
+async def process_chat_message(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
     try:
         data = await request.json()
         user_input = data.get("message", "").strip()
@@ -128,23 +142,19 @@ async def process_chat_message(request: Request):
         if not user_input:
             raise HTTPException(status_code=400, detail="Message cannot be empty")
         
-        # Get actual response from your AI system
+        # Process with your AI system
         result = await app.state.system.process_request(user_input)
         
-        # Format the response properly
         return {
             "response": result["response"],
-            "metadata": {
-                "agents_used": result.get("metadata", {}).get("agents", []),
-                "timestamp": datetime.now().isoformat()
-            }
+            "metadata": result.get("metadata", {})
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/")
-async def root():
-    return {"message": "Binarybrained AI API is running"}
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=5000)

@@ -6,37 +6,28 @@ import logging
 
 # Configure logging
 logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 # Load environment variables
 load_dotenv()
 
-# Excerpt from database.py
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
+# Use SQLite for local development
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
 
-# Create SQLAlchemy engine directly using f-string
 engine = create_engine(
-    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
-    f"{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}",
-    pool_size=10,
-    max_overflow=5,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_timeout=30,
-    echo=True  # Set to False in production
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={
+        "check_same_thread": False
+    }  # Required for SQLite
 )
 
 # Verify connection on startup
 try:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
-    print("✅ Successfully connected to PostgreSQL database")
+    print("✅ Successfully connected to SQLite database")
 except Exception as e:
-    print(f"❌ Failed to connect to PostgreSQL: {e}")
+    print(f"❌ Failed to connect to SQLite: {e}")
     raise
 
 # Session factory
@@ -60,3 +51,4 @@ def get_db():
         raise e
     finally:
         db.close()
+

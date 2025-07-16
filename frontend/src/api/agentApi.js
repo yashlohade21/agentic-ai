@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ai-agent-with-frontend.vercel.app/';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ai-agent-with-frontend.onrender.com';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -137,6 +137,16 @@ getSystemStatus: async () => {
     // If backend history is implemented, this would make an API call
     console.log('Client-side history cleared.');
     return { message: 'History cleared' };
+  },
+
+  debugSession: async () => {
+    try {
+      const response = await api.get('/api/auth/debug-session');
+      return response.data;
+    } catch (error) {
+      console.error('Debug session error:', error);
+      throw new Error(error.response?.data?.error || 'Debug session failed');
+    }
   }
 };
 

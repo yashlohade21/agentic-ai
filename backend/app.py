@@ -11,18 +11,28 @@ def create_app():
     app = Flask(__name__)
     
     # Configuration
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+    app.config['SESSION_COOKIE_SECURE'] = True  # Required for SameSite=None
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+
     
-    # Enable CORS for all routes
-    CORS(app, supports_credentials=True, origins=[
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://ai-agent-with-frontend.onrender.com',
-    'https://ai-agent-zeta-bice.vercel.app'
-    ])
+    # Enable CORS for all routes with proper session support
+    CORS(app, 
+         supports_credentials=True, 
+         origins=[
+             'http://localhost:3000', 
+             'http://127.0.0.1:3000',
+             'http://localhost:5173',
+             'http://127.0.0.1:5173',
+             'https://ai-agent-with-frontend.onrender.com',
+             'https://ai-agent-zeta-bice.vercel.app',
+         ],
+         allow_headers=['Content-Type', 'Authorization', 'Cookie'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         expose_headers=['Set-Cookie']
+    )
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')

@@ -5,6 +5,7 @@ from datetime import datetime
 from database import get_db  # Assuming you have this helper
 from routes.models import ChatMessage  # Assuming you have this model
 from main import BinarybrainedSystem  # Import your actual AI system
+from routes.auth import require_auth
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -127,13 +128,12 @@ def get_status():
         logging.error(f"Error in /chat/status endpoint: {e}", exc_info=True)
         return jsonify({'error': 'Failed to retrieve system status'}), 500
     
-@chat_bp.route('/chat', methods=['POST'])
+@chat_bp.route("/chat", methods=["POST"])
+@require_auth
 def chat():
     """Main endpoint to handle incoming chat messages."""
-    # This check should be handled by a proper auth decorator in a real app
-    if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
-        
+
+    logging.info(f"Session at /chat: {session}")
     data = request.get_json()
     if not data or 'message' not in data:
         return jsonify({'error': 'Invalid request body, "message" field is missing'}), 400

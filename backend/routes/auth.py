@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, session
+from functools import wraps
+from flask import Blueprint, logging, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import Session
 from database import get_db
@@ -125,6 +126,7 @@ def login():
             # Store user session
             session['user_id'] = user.id
             session['username'] = user.username
+            session.permanent = True  # Make session persistent
             
             return jsonify({
                 'message': 'Login successful',
@@ -151,6 +153,15 @@ def logout():
         return jsonify({'message': 'Logout successful'}), 200
     except Exception as e:
         return jsonify({'error': f'Logout failed: {str(e)}'}), 500
+
+@auth_bp.route('/debug-session', methods=['GET'])
+def debug_session():
+    """Debug endpoint to check session contents"""
+    return jsonify({
+        'session_contents': dict(session),
+        'has_user_id': 'user_id' in session,
+        'user_id': session.get('user_id')
+    }), 200
 
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
@@ -179,12 +190,14 @@ def check_auth():
     except Exception as e:
         return jsonify({'error': f'Auth check failed: {str(e)}'}), 500
 
-def require_auth(f):
-    """Decorator to require authentication"""
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
+def require_auth(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get('user_id')
+        logging.info(f"Auth check - Session contents: {dict(session)}")
+        logging.info(f"Auth check - User ID: {user_id}")
+        if not user_id:
+            logging.warning("Unauthorized access attempt: session empty")
             return jsonify({'error': 'Authentication required'}), 401
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
-
+        return func(*args, **kwargs)
+    return wrapper
