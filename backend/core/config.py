@@ -51,7 +51,7 @@ class Config:
             if ef.exists():
                 env_file = ef
                 break
-        if env_file.exists():
+        if env_file and env_file.exists():
             try:
                 with open(env_file, 'r', encoding='utf-8') as f:
                     for line in f:
