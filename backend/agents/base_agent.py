@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime
 # Removed unused langchain imports that were causing import issues
-from core.llm_manager import LLMManager, OllamaProvider, HuggingFaceProvider, GeminiProvider, BinaryBrainedProvider, MistralProvider
+from core.llm_manager import LLMManager, OllamaProvider, GeminiProvider, BinaryBrainedProvider, MistralProvider
 import os
 
 class AgentMessage(BaseModel):
