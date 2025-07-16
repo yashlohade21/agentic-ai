@@ -11,25 +11,17 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # Load environment variables
 load_dotenv()
 
-# PostgreSQL configuration
+# Excerpt from database.py
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "binarybrained")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
 
-if not all([POSTGRES_USER, POSTGRES_PASSWORD]):
-    raise ValueError("Missing PostgreSQL credentials in environment variables")
-
-# Connection URL for PostgreSQL
-SQLALCHEMY_DATABASE_URL = (
-    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
-    f"{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-)
-
-# Create SQLAlchemy engine
+# Create SQLAlchemy engine directly using f-string
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
+    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
+    f"{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}",
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
