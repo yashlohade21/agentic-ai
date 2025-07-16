@@ -29,9 +29,10 @@ def create_app():
              'https://ai-agent-with-frontend.onrender.com',
              'https://ai-agent-zeta-bice.vercel.app',
          ],
-         allow_headers=['Content-Type', 'Authorization', 'Cookie'],
+         allow_headers=['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-         expose_headers=['Set-Cookie']
+         expose_headers=['Set-Cookie'],
+         send_wildcard=False
     )
     
     # Register blueprints

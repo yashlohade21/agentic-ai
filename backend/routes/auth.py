@@ -1,5 +1,6 @@
 from functools import wraps
-from flask import Blueprint, logging, request, jsonify, session
+from flask import Blueprint, request, jsonify, session
+import logging
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import Session
 from database import get_db
