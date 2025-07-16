@@ -28,3 +28,33 @@
 2025-07-16 20:55:10,400 - agents.planner - WARNING - Failed to parse plan JSON: Expecting value: line 1 column 1 (char 0). Creating fallback plan.
 2025-07-16 20:55:10,400 - llm_manager - INFO - Attempting generation with binarybrained
 2025-07-16 20:55:11,361 - llm_manager - INFO - Successfully generated response with binarybrained
+2025-07-16 21:10:27,627 - main - INFO - Initializing Binarybrained-like AI Agent System...
+2025-07-16 21:10:27,629 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,629 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,629 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,630 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,630 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,630 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,630 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,630 - core.llm_manager - WARNING - Ollama provider disabled to avoid connection issues
+2025-07-16 21:10:27,632 - agent.enhanced_orchestrator - INFO - Registered agent: enhanced_coder
+2025-07-16 21:10:27,632 - agent.enhanced_orchestrator - INFO - Registered agent: planner
+2025-07-16 21:10:27,632 - agent.enhanced_orchestrator - INFO - Registered agent: researcher
+2025-07-16 21:10:27,633 - agent.enhanced_orchestrator - INFO - Registered agent: file_picker
+2025-07-16 21:10:27,633 - agent.enhanced_orchestrator - INFO - Registered agent: reviewer
+2025-07-16 21:10:27,633 - agent.enhanced_orchestrator - INFO - Registered agent: thinker
+2025-07-16 21:10:27,633 - agent.enhanced_orchestrator - INFO - Registered agent: image_generation
+2025-07-16 21:10:27,633 - main - INFO - [SUCCESS] Binarybrained system initialized successfully!
+2025-07-16 21:10:27,633 - main - INFO - Available agents: ['enhanced_coder', 'planner', 'researcher', 'file_picker', 'reviewer', 'thinker', 'image_generation']
+2025-07-16 21:10:27,634 - main - INFO - Processing request: Hello, can you help me?
+2025-07-16 21:10:27,636 - agent.enhanced_orchestrator - INFO - Processing enhanced request: Hello, can you help me?
+2025-07-16 21:10:27,636 - llm_manager - INFO - Attempting generation with binarybrained
+2025-07-16 21:10:28,444 - llm_manager - INFO - Successfully generated response with binarybrained
+2025-07-16 21:10:28,445 - agent.file_picker - INFO - Finding files for query: Find files relevant to: Hello, can you help me?
+2025-07-16 21:10:36,172 - llm_manager - INFO - Attempting generation with binarybrained
+2025-07-16 21:10:37,018 - llm_manager - INFO - Successfully generated response with binarybrained
+2025-07-16 21:10:37,020 - llm_manager - INFO - Attempting generation with binarybrained
+2025-07-16 21:10:38,022 - llm_manager - INFO - Successfully generated response with binarybrained
+2025-07-16 21:10:38,023 - agents.planner - WARNING - Failed to parse plan JSON: Expecting value: line 1 column 1 (char 0). Creating fallback plan.
+2025-07-16 21:10:38,023 - llm_manager - INFO - Attempting generation with binarybrained
+2025-07-16 21:10:39,022 - llm_manager - INFO - Successfully generated response with binarybrained

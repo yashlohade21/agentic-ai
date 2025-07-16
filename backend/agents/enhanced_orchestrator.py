@@ -394,16 +394,26 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
     
     def _create_fallback_response(self, results: Dict[str, Any], request: str) -> str:
         """Create a fallback response when LLM consolidation fails"""
-        response_parts = [f"# Response to: {request}\n"]
+        response_parts = []
         
+        # Extract actual responses from results
         for task_id, result in results.items():
             if isinstance(result, dict) and "error" not in result:
                 if "response" in result:
                     response_parts.append(result["response"])
                 elif "code" in result:
                     response_parts.append(f"```\n{result['code']}\n```")
+                elif "explanation" in result:
+                    response_parts.append(result["explanation"])
+                elif "content" in result:
+                    response_parts.append(result["content"])
         
-        return "\n\n".join(response_parts)
+        # If we have actual responses, return them
+        if response_parts:
+            return "\n\n".join(response_parts)
+        
+        # If no responses found, generate a simple response
+        return f"I understand you're asking about: {request}. Let me help you with that. However, I'm experiencing some technical difficulties in generating a detailed response right now. Could you please try rephrasing your question or being more specific about what you need help with?"
     
     def _update_conversation_context(self, request: str, response: str, context: Dict[str, Any]):
         """Update conversation context for future interactions"""
