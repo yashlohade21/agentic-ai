@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class EnhancedOrchestratorAgent(BaseAgent):
-    """Enhanced orchestrator with Codebuff-like capabilities"""
+    """Enhanced orchestrator with Binarybrained-like capabilities"""
     
     def __init__(self, **kwargs):
         super().__init__("enhanced_orchestrator", **kwargs)
@@ -23,7 +23,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
         self.timeout_seconds = kwargs.get('timeout_seconds', 300)
     
     def get_system_prompt(self) -> str:
-        return """You are an Enhanced Orchestrator Agent - the intelligent coordinator of a multi-agent system designed to provide Codebuff-like assistance.
+        return """You are an Enhanced Orchestrator Agent - the intelligent coordinator of a multi-agent system designed to provide Binarybrained-like assistance.
 
 **Your Role:**
 You are like a senior technical lead who understands how to break down complex requests, gather the right context, and coordinate specialists to deliver comprehensive, high-quality responses.
@@ -36,7 +36,7 @@ You are like a senior technical lead who understands how to break down complex r
 5. **User Experience**: Deliver responses that feel like working with an expert mentor
 
 **Available Specialized Agents:**
-- **enhanced_coder**: Expert coding assistant with Codebuff-like capabilities
+- **enhanced_coder**: Expert coding assistant with Binarybrained-like capabilities
 - **file_picker**: Finds relevant files and analyzes project structure
 - **researcher**: Gathers information from documentation and web sources
 - **planner**: Creates detailed execution plans for complex tasks
@@ -66,7 +66,7 @@ You are like a senior technical lead who understands how to break down complex r
 - Maintain consistency across related tasks
 - Suggest improvements that align with overall architecture
 
-You coordinate specialists to deliver responses that are comprehensive, educational, and genuinely helpful - just like Codebuff."""
+You coordinate specialists to deliver responses that are comprehensive, educational, and genuinely helpful - just like Binarybrained."""
     
     def register_agent(self, agent: BaseAgent):
         """Register a specialized agent"""
@@ -346,9 +346,9 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
         return results
     
     async def _generate_comprehensive_response(self, results: Dict[str, Any], request: str, context: Dict[str, Any]) -> str:
-        """Generate a comprehensive, Codebuff-style response"""
+        """Generate a comprehensive, Binarybrained-style response"""
         consolidation_prompt = f"""
-        You are generating a final response as Codebuff - an expert coding mentor.
+        You are generating a final response as Binarybrained - an expert coding mentor.
         
         Original request: {request}
         

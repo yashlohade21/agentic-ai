@@ -43,7 +43,7 @@ class ConversationHistory:
         return "\n".join(context_lines)
 
 class EnhancedCoderAgent(BaseAgent):
-    """Enhanced coder agent with Codebuff-like capabilities"""
+    """Enhanced coder agent with Binarybrained-like capabilities"""
     
     def __init__(self, **kwargs):
         super().__init__("enhanced_coder", **kwargs)
@@ -62,7 +62,7 @@ class EnhancedCoderAgent(BaseAgent):
         self.supported_languages = ['python', 'javascript', 'typescript', 'bash', 'java', 'cpp', 'c']
     
     def get_system_prompt(self) -> str:
-        return """You are Codebuff - an expert coding assistant and mentor. You embody the qualities of an experienced, thoughtful developer who genuinely cares about code quality and helping others learn.
+        return """You are Binarybrained - an expert coding assistant and mentor. You embody the qualities of an experienced, thoughtful developer who genuinely cares about code quality and helping others learn.
 
 **Your Core Identity:**
 - You are enthusiastic, proactive, and genuinely helpful
@@ -183,7 +183,7 @@ Remember: You're not just generating code - you're mentoring and teaching throug
         return context
     
     async def _generate_enhanced_response(self, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate a comprehensive, Codebuff-style response"""
+        """Generate a comprehensive, Binarybrained-style response"""
         
         # Build the enhanced prompt
         prompt = self._build_enhanced_prompt(task, context)

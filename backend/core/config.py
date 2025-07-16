@@ -45,7 +45,7 @@ class Config:
     def _load_env_file(self):
         """Load environment variables from .env file if it exists"""
         # Check both project root and backend directory
-        env_files = [Path('.env'), Path('backend/.env')]
+        env_files = [Path('.env'), Path('backend/.env'), Path(__file__).parent.parent / '.env']
         env_file = None
         for ef in env_files:
             if ef.exists():
@@ -53,6 +53,7 @@ class Config:
                 break
         if env_file and env_file.exists():
             try:
+                print(f"Loading environment from: {env_file}")
                 with open(env_file, 'r', encoding='utf-8') as f:
                     for line in f:
                         line = line.strip()
@@ -66,6 +67,7 @@ class Config:
                             elif value.startswith("'") and value.endswith("'"):
                                 value = value[1:-1]
                             os.environ[key] = value
+                            print(f"Loaded {key}={'*' * len(value) if 'KEY' in key or 'TOKEN' in key else value}")
             except Exception as e:
                 print(f"Warning: Could not load .env file: {e}")
 
