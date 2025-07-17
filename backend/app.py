@@ -10,14 +10,16 @@ def create_app():
     """Create and configure Flask application"""
     app = Flask(__name__)
     
-    # Configuration
+    # Configuration - Environment-specific settings
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
-    app.config['SESSION_COOKIE_SECURE'] = True  # Required for SameSite=None
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+    
+    # Session cookie settings - different for development vs production
+    is_production = os.getenv('FLASK_ENV') == 'production'
+    app.config['SESSION_COOKIE_SECURE'] = is_production  # Only secure in production
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'  # Lax for local dev
     app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-    
     # Enable CORS for all routes with proper session support
     CORS(app, 
          supports_credentials=True, 
@@ -62,4 +64,3 @@ app = create_app()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-

@@ -83,8 +83,13 @@ def register():
             db.commit()
             db.refresh(new_user)
             
+            # Auto-login the user after successful registration
+            session['user_id'] = new_user.id
+            session['username'] = new_user.username
+            session.permanent = True
+            
             return jsonify({
-                'message': 'User registered successfully',
+                'message': 'User registered and logged in successfully',
                 'user': {
                     'id': new_user.id,
                     'username': new_user.username,

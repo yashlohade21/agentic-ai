@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ai-agent-with-frontend.onrender.com';
+// Use local development server by default, fallback to production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -43,7 +44,7 @@ export const agentApi = {
       const response = await api.post('/api/auth/register', userData);
       return response.data;
     } catch (error) {
-      throw new Error(error.response?.data?.detail || 'Registration failed');
+      throw new Error(error.response?.data?.error || 'Registration failed');
     }
   },
   
@@ -226,4 +227,3 @@ export class WebSocketClient {
 }
 
 export default agentApi;
-
