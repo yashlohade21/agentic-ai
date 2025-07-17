@@ -166,14 +166,15 @@ def logout():
     except Exception as e:
         return jsonify({'error': f'Logout failed: {str(e)}'}), 500
 
-@auth_bp.route('/debug-session', methods=['GET'])
+@auth_bp.route('/debug-session')
 def debug_session():
-    """Debug endpoint to check session contents"""
-    return jsonify({
-        'session_contents': dict(session),
-        'has_user_id': 'user_id' in session,
-        'user_id': session.get('user_id')
-    }), 200
+    return jsonify(dict(session)), 200
+    # """Debug endpoint to check session contents"""
+    # return jsonify({
+    #     'session_contents': dict(session),
+    #     'has_user_id': 'user_id' in session,
+    #     'user_id': session.get('user_id')
+    # }), 200
 
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
