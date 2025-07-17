@@ -2,7 +2,7 @@ from flask import Flask, session
 from flask_cors import CORS
 from routes.auth import auth_bp
 from routes.chat import chat_bp
-from database import Base, engine
+
 import os
 import logging
 from datetime import timedelta
@@ -40,6 +40,7 @@ def create_app():
     CORS(app, 
          supports_credentials=True, 
          origins=[
+             'https://5000-icezy88i9a1jl57vkj3uq-c80150bb.manusvm.computer',
              'http://localhost:3000', 
              'http://127.0.0.1:3000',
              'http://localhost:5173',
@@ -66,12 +67,7 @@ def create_app():
     def root():
         return {'message': 'AI Agent API is running'}
     
-    # Create database tables
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("✅ Database tables created/verified successfully")
-    except Exception as e:
-        print(f"❌ Database table creation failed: {e}")
+
     
     return app
 

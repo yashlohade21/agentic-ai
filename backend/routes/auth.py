@@ -3,9 +3,7 @@ from flask import Blueprint, request, jsonify, session
 import logging
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.orm import Session
-from database import get_db
-from routes.models import User
+from firebase_config import db
 from datetime import datetime
 import re
 
@@ -60,50 +58,39 @@ def register():
             return jsonify({'error': password_message}), 400
         
         # Check if user already exists
-        db = next(get_db())
-        try:
-            existing_user = db.query(User).filter(
-                (User.username == username) | (User.email == email)
-            ).first()
-            
-            if existing_user:
-                if existing_user.username == username:
-                    return jsonify({'error': 'Username already exists'}), 409
-                else:
-                    return jsonify({'error': 'Email already registered'}), 409
-            
-            # Create new user
-            hashed_password = generate_password_hash(password)
-            new_user = User(
-                username=username,
-                email=email,
-                hashed_password=hashed_password
-            )
-            
-            db.add(new_user)
-            db.commit()
-            db.refresh(new_user)
-            
-            # Auto-login the user after successful registration
-            session['user_id'] = new_user.id
-            session['username'] = new_user.username
-            session['login_time'] = datetime.utcnow().isoformat()
-            session.permanent = True
-            
-            return jsonify({
-                'message': 'User registered and logged in successfully',
-                'user': {
-                    'id': new_user.id,
-                    'username': new_user.username,
-                    'email': new_user.email
-                }
-            }), 201
-            
-        except Exception as e:
-            db.rollback()
-            return jsonify({'error': f'Database error: {str(e)}'}), 500
-        finally:
-            db.close()
+        users_ref = db.collection('users')
+        username_query = users_ref.where('username', '==', username).limit(1).stream()
+        email_query = users_ref.where('email', '==', email).limit(1).stream()
+
+        if next(username_query, None):
+            return jsonify({'error': 'Username already exists'}), 409
+        if next(email_query, None):
+            return jsonify({'error': 'Email already registered'}), 409
+
+        # Create new user
+        hashed_password = generate_password_hash(password)
+        new_user_ref = users_ref.document()
+        new_user_id = new_user_ref.id
+        new_user_ref.set({
+            'username': username,
+            'email': email,
+            'hashed_password': hashed_password
+        })
+        
+        # Auto-login the user after successful registration
+        session['user_id'] = new_user_id
+        session['username'] = username
+        session['login_time'] = datetime.utcnow().isoformat()
+        session.permanent = True
+        
+        return jsonify({
+            'message': 'User registered and logged in successfully',
+            'user': {
+                'id': new_user_id,
+                'username': username,
+                'email': email
+            }
+        }), 201
             
     except Exception as e:
         return jsonify({'error': f'Registration failed: {str(e)}'}), 500
@@ -124,35 +111,35 @@ def login():
             return jsonify({'error': 'Username and password are required'}), 400
         
         # Find user
-        db = next(get_db())
-        try:
-            user = db.query(User).filter(User.username == username).first()
-            
-            if not user or not check_password_hash(user.hashed_password, password):
-                return jsonify({'error': 'Invalid username or password'}), 401
-            
-            # Store user session with timestamp
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['login_time'] = datetime.utcnow().isoformat()
-            session.permanent = True  # Make session persistent
-            
-            return jsonify({
-                'message': 'Login successful',
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email
-                }
-            }), 200
-            
-        except Exception as e:
-            return jsonify({'error': f'Database error: {str(e)}'}), 500
-        finally:
-            db.close()
+        users_ref = db.collection('users')
+        query = users_ref.where('username', '==', username).limit(1).stream()
+        user_snapshot = next(query, None)
+
+        if not user_snapshot:
+            return jsonify({'error': 'Invalid username or password'}), 401
+
+        user_data = user_snapshot.to_dict()
+        if not check_password_hash(user_data['hashed_password'], password):
+            return jsonify({'error': 'Invalid username or password'}), 401
+        
+        # Store user session with timestamp
+        session['user_id'] = user_snapshot.id
+        session['username'] = user_data['username']
+        session['login_time'] = datetime.utcnow().isoformat()
+        session.permanent = True  # Make session persistent
+        
+        return jsonify({
+            'message': 'Login successful',
+            'user': {
+                'id': user_snapshot.id,
+                'username': user_data['username'],
+                'email': user_data['email']
+            }
+        }), 200
             
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
+
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Logout user"""
@@ -193,12 +180,6 @@ def logout():
 @auth_bp.route('/debug-session')
 def debug_session():
     return jsonify(dict(session)), 200
-    # """Debug endpoint to check session contents"""
-    # return jsonify({
-    #     'session_contents': dict(session),
-    #     'has_user_id': 'user_id' in session,
-    #     'user_id': session.get('user_id')
-    # }), 200
 
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
@@ -212,26 +193,25 @@ def check_auth():
                 session.modified = True
                 return jsonify({'authenticated': False, 'reason': 'session_expired'}), 200
             
-            db = next(get_db())
-            try:
-                user = db.query(User).filter(User.id == session['user_id']).first()
-                if user:
-                    # Update last activity time
-                    session['last_activity'] = datetime.utcnow().isoformat()
-                    return jsonify({
-                        'authenticated': True,
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email
-                        }
-                    }), 200
-                else:
-                    session.clear()
-                    session.modified = True
-                    return jsonify({'authenticated': False, 'reason': 'user_not_found'}), 200
-            finally:
-                db.close()
+            users_ref = db.collection('users')
+            user_doc = users_ref.document(session['user_id']).get()
+
+            if user_doc.exists:
+                user_data = user_doc.to_dict()
+                # Update last activity time
+                session['last_activity'] = datetime.utcnow().isoformat()
+                return jsonify({
+                    'authenticated': True,
+                    'user': {
+                        'id': user_doc.id,
+                        'username': user_data['username'],
+                        'email': user_data['email']
+                    }
+                }), 200
+            else:
+                session.clear()
+                session.modified = True
+                return jsonify({'authenticated': False, 'reason': 'user_not_found'}), 200
         else:
             return jsonify({'authenticated': False, 'reason': 'no_session'}), 200
     except Exception as e:
@@ -244,32 +224,21 @@ def require_auth(func):
     def wrapper(*args, **kwargs):
         user_id = session.get('user_id')
         
-        # Enhanced debugging
-        logging.info(f"Auth check - Session contents: {dict(session)}")
-        logging.info(f"Auth check - User ID: {user_id}")
-        logging.info(f"Auth check - Session ID: {session.get('_id', 'No session ID')}")
-        logging.info(f"Auth check - Request headers: {dict(request.headers)}")
-        
         if not user_id:
-            logging.warning("Unauthorized access attempt: session empty or no user_id")
-            logging.warning(f"Session keys: {list(session.keys())}")
             return jsonify({'error': 'Authentication required'}), 401
         
         # Additional check: verify user still exists in database
         try:
-            from database import get_db
-            from routes.models import User
-            db = next(get_db())
-            user = db.query(User).filter(User.id == user_id).first()
-            if not user:
-                logging.warning(f"User {user_id} not found in database, clearing session")
+            users_ref = db.collection('users')
+            user_doc = users_ref.document(user_id).get()
+            if not user_doc.exists:
                 session.clear()
                 session.modified = True
                 return jsonify({'error': 'Authentication required'}), 401
-            db.close()
         except Exception as e:
-            logging.error(f"Database error during auth check: {e}")
             return jsonify({'error': 'Authentication required'}), 401
         
         return func(*args, **kwargs)
     return wrapper
+
+

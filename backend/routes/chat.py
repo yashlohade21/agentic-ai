@@ -2,8 +2,7 @@ import logging
 import asyncio
 from flask import Blueprint, jsonify, request, session
 from datetime import datetime
-from database import get_db  # Assuming you have this helper
-from routes.models import ChatMessage  # Assuming you have this model
+from firebase_config import db
 from main import BinarybrainedSystem  # Import your actual AI system
 from routes.auth import require_auth
 
@@ -11,7 +10,7 @@ from routes.auth import require_auth
 logging.basicConfig(level=logging.INFO)
 
 # Create a Blueprint for chat routes
-chat_bp = Blueprint('chat', __name__)
+chat_bp = Blueprint("chat", __name__)
 
 class AIChatSystem:
     """
@@ -42,7 +41,7 @@ class AIChatSystem:
             self.initialized = False
             logging.error(f"AI system initialization failed: {e}", exc_info=True)
 
-    def process_message(self, message: str, user_id: int) -> dict:
+    def process_message(self, message: str, user_id: str) -> dict:
         """
         Processes a user message by calling the async AI system and handles DB operations.
         """
@@ -60,40 +59,31 @@ class AIChatSystem:
             metadata = ai_result.get("metadata", {})
 
             # --- Database Operations ---
-            db = None
             try:
-                db = next(get_db())
+                chat_messages_ref = db.collection("chat_messages")
                 
                 # Save user message to DB
-                user_msg = ChatMessage(
-                    content=message,
-                    timestamp=datetime.now(),
-                    user_id=user_id,
-                    sender='user' # Assuming your model has a sender field
-                )
-                db.add(user_msg)
+                chat_messages_ref.add({
+                    "content": message,
+                    "timestamp": datetime.now(),
+                    "user_id": user_id,
+                    "sender": "user"
+                })
                 
                 # Save AI response to DB
-                ai_msg = ChatMessage(
-                    content=ai_response_content,
-                    timestamp=datetime.now(),
-                    user_id=user_id, # Link AI message to the user's session
-                    sender='bot' # Assuming your model has a sender field
-                )
-                db.add(ai_msg)
+                chat_messages_ref.add({
+                    "content": ai_response_content,
+                    "timestamp": datetime.now(),
+                    "user_id": user_id,
+                    "sender": "bot"
+                })
                 
-                db.commit()
                 logging.info(f"Successfully saved chat for user_id: {user_id}")
                 
             except Exception as db_error:
                 logging.error(f"Database error for user_id {user_id}: {db_error}", exc_info=True)
-                if db:
-                    db.rollback()
                 # Even if DB fails, we should still return the response to the user.
-                metadata['db_error'] = f"Failed to save message history: {db_error}"
-            finally:
-                if db:
-                    db.close()
+                metadata["db_error"] = f"Failed to save message history: {db_error}"
             # --- End of Database Operations ---
 
             return {
@@ -114,19 +104,19 @@ class AIChatSystem:
 # This ensures the AI model is loaded only once when the app starts.
 ai_chat = AIChatSystem()
 
-@chat_bp.route('/chat/status', methods=['GET'])
+@chat_bp.route("/chat/status", methods=["GET"])
 def get_status():
     """Endpoint to get the current status of the AI system."""
     try:
         status_data = {
-            'status': 'active' if ai_chat.initialized else 'initializing_failed',
-            'agents': ['enhanced_orchestrator', 'enhanced_coder', 'researcher'], # This can be dynamic later
-            'session_requests': 0  # Placeholder for session tracking
+            "status": "active" if ai_chat.initialized else "initializing_failed",
+            "agents": ["enhanced_orchestrator", "enhanced_coder", "researcher"], # This can be dynamic later
+            "session_requests": 0  # Placeholder for session tracking
         }
         return jsonify(status_data), 200
     except Exception as e:
         logging.error(f"Error in /chat/status endpoint: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to retrieve system status'}), 500
+        return jsonify({"error": "Failed to retrieve system status"}), 500
     
 @chat_bp.route("/chat", methods=["POST"])
 @require_auth
@@ -135,31 +125,32 @@ def chat():
 
     logging.info(f"Session at /chat: {session}")
     data = request.get_json()
-    if not data or 'message' not in data:
-        return jsonify({'error': 'Invalid request body, "message" field is missing'}), 400
+    if not data or "message" not in data:
+        return jsonify({"error": "Invalid request body, \"message\" field is missing"}), 400
         
-    message = data['message'].strip()
+    message = data["message"].strip()
     if not message:
-        return jsonify({'error': 'Message content cannot be empty'}), 400
+        return jsonify({"error": "Message content cannot be empty"}), 400
         
-    user_id = session['user_id']
+    user_id = session["user_id"]
     
     try:
         result = ai_chat.process_message(message=message, user_id=user_id)
         
-        if result.get('success'):
+        if result.get("success"):
             return jsonify({
-                'success': True,
-                'response': result['response'],
-                'metadata': result.get('metadata', {})
+                "success": True,
+                "response": result["response"],
+                "metadata": result.get("metadata", {})
             }), 200
         else:
             # Send a specific error from our system if available
-            error_message = result.get('error', 'Processing failed due to an unknown error.')
-            return jsonify({'error': error_message}), 500
+            error_message = result.get("error", "Processing failed due to an unknown error.")
+            return jsonify({"error": error_message}), 500
             
     except Exception as e:
         # This is a final catch-all for any unexpected errors in the endpoint itself.
         logging.error(f"Critical error in /chat endpoint for user_id {user_id}: {e}", exc_info=True)
-        return jsonify({'error': 'A critical internal server error occurred.'}), 500
+        return jsonify({"error": "A critical internal server error occurred."}) , 500
+
 
