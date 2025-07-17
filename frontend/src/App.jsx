@@ -58,6 +58,25 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       checkBackendConnection();
+      
+      // Set up periodic auth check every 5 minutes
+      const authCheckInterval = setInterval(async () => {
+        const authStatus = await agentApi.checkAuth();
+        if (!authStatus.authenticated) {
+          if (authStatus.reason === 'session_expired') {
+            toast.error('Your session has expired. Please log in again.', {
+              icon: '⏰',
+              duration: 4000,
+            });
+          }
+          setUser(null);
+          setIsAuthenticated(false);
+          setMessages([]);
+          setConnectionStatus('disconnected');
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+      
+      return () => clearInterval(authCheckInterval);
     }
   }, [isAuthenticated]);
 
@@ -71,9 +90,21 @@ function App() {
       if (authStatus.authenticated) {
         setUser(authStatus.user);
         setIsAuthenticated(true);
+      } else {
+        // Handle different reasons for not being authenticated
+        if (authStatus.reason === 'session_expired') {
+          toast.error('Your session has expired. Please log in again.', {
+            icon: '⏰',
+            duration: 4000,
+          });
+        }
+        setUser(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
-      console.log('Not authenticated');
+      console.log('Auth check failed:', error);
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setAuthLoading(false);
     }
@@ -135,19 +166,32 @@ function App() {
   const handleLogout = async () => {
     try {
       await agentApi.logout();
+      // Clear all local state
       setUser(null);
       setIsAuthenticated(false);
       setMessages([]);
       setConnectionStatus('disconnected');
+      setSystemStatus({ status: 'inactive', agents: [], session_requests: 0 });
+      setActiveAgents([]);
+      
       toast.success('Logged out successfully', {
         icon: '👋',
         duration: 2000,
       });
     } catch (error) {
       console.error('Logout error:', error);
+      // Even if logout fails on server, clear local state
       setUser(null);
       setIsAuthenticated(false);
       setMessages([]);
+      setConnectionStatus('disconnected');
+      setSystemStatus({ status: 'inactive', agents: [], session_requests: 0 });
+      setActiveAgents([]);
+      
+      toast.error('Logout completed (with errors)', {
+        icon: '⚠️',
+        duration: 3000,
+      });
     }
   };
 

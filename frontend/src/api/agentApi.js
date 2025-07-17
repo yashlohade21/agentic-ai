@@ -71,8 +71,9 @@ export const agentApi = {
       const response = await api.get('/api/auth/check-auth');
       return response.data;
     } catch (error) {
+      console.log('Auth check failed:', error.response?.data || error.message);
       // If there's an error (e.g., 401 Unauthorized), assume not authenticated
-      return { authenticated: false };
+      return { authenticated: false, reason: 'network_error' };
     }
   },
 

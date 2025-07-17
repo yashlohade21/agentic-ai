@@ -124,13 +124,37 @@ const MessageRenderer = ({ message }) => {
           </div>
 
           {/* Message Content */}
-          <div className={`prose prose-xs sm:prose-sm md:prose-base max-w-none ${
-            message.type === 'user' ? 'prose-invert' : 'dark:prose-invert'
-          }`}>
+          <div className={`prose 
+            prose-xs    // Default for smallest screens (under 400px)
+            xs:prose-sm // Extra small devices (400px and up)
+            sm:prose-sm // Small devices (640px and up)
+            md:prose-base // Medium devices (768px and up)
+            lg:prose-lg // Large devices (1024px and up)
+            xl:prose-xl // Extra large devices (1280px and up)
+            2xl:prose-2xl // 2XL devices (1536px and up)
+            max-w-none ${
+              message.type === 'user' ? 'prose-invert' : 'dark:prose-invert'
+            }`}>
             {message.type === 'error' ? (
-              <div className="flex items-start space-x-1 md:space-x-2">
-                <AlertCircle className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-4 lg:h-4 text-error-600 mt-0.5 flex-shrink-0" />
-                <div className="text-error-700 dark:text-error-300 text-xs md:text-sm">
+              <div className="flex items-start gap-1 
+                xs:gap-1.5
+                sm:gap-2
+                md:gap-2.5">
+                <AlertCircle className="
+                  w-2.5 h-2.5    // Default (under 400px)
+                  xs:w-3 xs:h-3  // 400px+
+                  sm:w-3.5 sm:h-3.5 // 640px+
+                  md:w-4 md:h-4   // 768px+
+                  lg:w-5 lg:h-5   // 1024px+
+                  text-error-600 
+                  mt-0.5 
+                  flex-shrink-0" />
+                <div className="text-error-700 dark:text-error-300 
+                  text-xs      // Default (under 400px)
+                  xs:text-xs   // 400px+
+                  sm:text-sm   // 640px+
+                  md:text-base // 768px+
+                  lg:text-lg   // 1024px+">
                   {message.content}
                 </div>
               </div>
@@ -142,42 +166,89 @@ const MessageRenderer = ({ message }) => {
                     const match = /language-(\w+)/.exec(className || '');
                     return !inline && match ? (
                       <div className="relative">
-                        <div className="flex items-center justify-between bg-gray-800 text-gray-300 px-2 md:px-3 lg:px-4 py-1 md:py-2 text-[10px] md:text-xs rounded-t">
+                        <div className="flex items-center justify-between bg-gray-800 text-gray-300 
+                          px-2 py-1      // Default (under 400px)
+                          xs:px-2 xs:py-1 // 400px+
+                          sm:px-3 sm:py-1.5 // 640px+
+                          md:px-4 md:py-2 // 768px+
+                          lg:px-5 lg:py-2.5 // 1024px+
+                          text-[10px]     // Default
+                          xs:text-[11px]  // 400px+
+                          sm:text-xs      // 640px+
+                          md:text-sm      // 768px+
+                          rounded-t">
                           <span>{match[1]}</span>
                           <motion.button
-                            className="hover:bg-gray-700 p-0.5 md:p-1 rounded transition-colors"
+                            className="hover:bg-gray-700 
+                              p-0.5      // Default
+                              sm:p-0.75  // 640px+
+                              md:p-1     // 768px+
+                              rounded transition-colors"
                             onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            <Copy className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-4 lg:h-4" />
+                            <Copy className="
+                              w-2.5 h-2.5    // Default
+                              xs:w-3 xs:h-3  // 400px+
+                              sm:w-3.5 sm:h-3.5 // 640px+
+                              md:w-4 md:h-4   // 768px+"/>
                           </motion.button>
                         </div>
                         <SyntaxHighlighter
                           style={oneDark}
                           language={match[1]}
                           PreTag="div"
-                          className="text-xs md:text-sm rounded-t-none"
+                          className="
+                            text-[10px]    // Default
+                            xs:text-[11px] // 400px+
+                            sm:text-xs     // 640px+
+                            md:text-sm     // 768px+
+                            lg:text-base   // 1024px+
+                            rounded-t-none"
                           {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       </div>
                     ) : (
-                      <code className={`${className} bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs md:text-sm`} {...props}>
+                      <code className={`${className} bg-gray-100 dark:bg-gray-700 
+                        px-1 py-0.5      // Default
+                        sm:px-1.5 sm:py-0.75 // 640px+
+                        rounded 
+                        text-xs          // Default
+                        sm:text-sm       // 640px+
+                        md:text-base     // 768px+`} 
+                        {...props}>
                         {children}
                       </code>
                     );
                   },
                   table: ({ children }) => (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs md:text-sm">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 
+                        text-xs      // Default
+                        sm:text-sm   // 640px+
+                        md:text-base // 768px+">
                         {children}
                       </table>
                     </div>
                   ),
                   blockquote: ({ children }) => (
-                    <blockquote className="border-l-2 md:border-l-3 lg:border-l-4 border-primary-500 pl-2 md:pl-3 lg:pl-4 italic text-gray-600 dark:text-gray-400 text-xs md:text-sm">
+                    <blockquote className="
+                      border-l-2      // Default
+                      sm:border-l-3   // 640px+
+                      md:border-l-4    // 768px+
+                      border-primary-500 
+                      pl-2            // Default
+                      sm:pl-3         // 640px+
+                      md:pl-4         // 768px+
+                      lg:pl-5         // 1024px+
+                      italic 
+                      text-gray-600 dark:text-gray-400 
+                      text-xs        // Default
+                      sm:text-sm      // 640px+
+                      md:text-base    // 768px+">
                       {children}
                     </blockquote>
                   ),

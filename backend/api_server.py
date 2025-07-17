@@ -34,16 +34,6 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# Database simulation (replace with real DB)
-fake_users_db = {
-    "testuser": {
-        "username": "testuser",
-        "email": "test@example.com",
-        "hashed_password": pwd_context.hash("testpassword"),
-        "disabled": False,
-    }
-}
-
 app = FastAPI()
 
 # Enhanced CORS configuration

@@ -86,6 +86,7 @@ def register():
             # Auto-login the user after successful registration
             session['user_id'] = new_user.id
             session['username'] = new_user.username
+            session['login_time'] = datetime.utcnow().isoformat()
             session.permanent = True
             
             return jsonify({
@@ -129,9 +130,10 @@ def login():
             if not user or not check_password_hash(user.hashed_password, password):
                 return jsonify({'error': 'Invalid username or password'}), 401
             
-            # Store user session
+            # Store user session with timestamp
             session['user_id'] = user.id
             session['username'] = user.username
+            session['login_time'] = datetime.utcnow().isoformat()
             session.permanent = True  # Make session persistent
             
             return jsonify({
@@ -148,15 +150,22 @@ def login():
         finally:
             db.close()
             
+
+
+
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
-
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Logout user"""
     try:
         session.clear()
-        return jsonify({'message': 'Logout successful'}), 200
+        # Force session modification to ensure cookie is updated
+        session.modified = True
+        response = jsonify({'message': 'Logout successful'})
+        # Explicitly clear the session cookie
+        response.set_cookie('session', '', expires=0, httponly=True, samesite='Lax')
+        return response, 200
     except Exception as e:
         return jsonify({'error': f'Logout failed: {str(e)}'}), 500
 
@@ -173,11 +182,20 @@ def debug_session():
 def check_auth():
     """Check if user is authenticated"""
     try:
-        if 'user_id' in session:
+        if 'user_id' in session and 'login_time' in session:
+            # Check session timeout (30 minutes)
+            login_time = datetime.fromisoformat(session['login_time'])
+            if (datetime.utcnow() - login_time).total_seconds() > 1800:  # 30 minutes
+                session.clear()
+                session.modified = True
+                return jsonify({'authenticated': False, 'reason': 'session_expired'}), 200
+            
             db = next(get_db())
             try:
                 user = db.query(User).filter(User.id == session['user_id']).first()
                 if user:
+                    # Update last activity time
+                    session['last_activity'] = datetime.utcnow().isoformat()
                     return jsonify({
                         'authenticated': True,
                         'user': {
@@ -187,14 +205,18 @@ def check_auth():
                         }
                     }), 200
                 else:
-                    session.clear()
-                    return jsonify({'authenticated': False}), 200
             finally:
                 db.close()
+
+                    session.clear()
+                    session.modified = True
+                    return jsonify({'authenticated': False, 'reason': 'user_not_found'}), 200
         else:
-            return jsonify({'authenticated': False}), 200
+            return jsonify({'authenticated': False, 'reason': 'no_session'}), 200
     except Exception as e:
-        return jsonify({'error': f'Auth check failed: {str(e)}'}), 500
+        session.clear()
+        session.modified = True
+        return jsonify({'authenticated': False, 'error': f'Auth check failed: {str(e)}'}), 500
 
 def require_auth(func):
     @wraps(func)

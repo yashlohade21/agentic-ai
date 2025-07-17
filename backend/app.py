@@ -12,7 +12,7 @@ def create_app():
     
     # Configuration - Environment-specific settings
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # 30 minutes instead of 24 hours
     
     # Session cookie settings - different for development vs production
     is_production = os.getenv('FLASK_ENV') == 'production'
