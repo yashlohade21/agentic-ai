@@ -4,21 +4,37 @@ from routes.auth import auth_bp
 from routes.chat import chat_bp
 from database import Base, engine
 import os
+import logging
 from datetime import timedelta
 
 def create_app():
     """Create and configure Flask application"""
     app = Flask(__name__)
     
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
     # Configuration - Environment-specific settings
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # 30 minutes instead of 24 hours
     
     # Session cookie settings - different for development vs production
-    is_production = os.getenv('FLASK_ENV') == 'production'
-    app.config['SESSION_COOKIE_SECURE'] = is_production  # Only secure in production
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'  # Lax for local dev
+    is_production = os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER')
+    
+    if is_production:
+        # Production settings for HTTPS deployment
+        app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+    else:
+        # Development settings for HTTP
+        app.config['SESSION_COOKIE_SECURE'] = False
+        app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    
     app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_DOMAIN'] = None  # Allow subdomain sharing
 
     # Enable CORS for all routes with proper session support
     CORS(app, 

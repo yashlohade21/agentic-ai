@@ -153,16 +153,6 @@ getSystemStatus: async () => {
   }
 };
 
-// Ensure fetch requests include credentials
-fetch('/api/chat', {
-  method: 'POST',
-  credentials: 'include', // This is crucial for sending cookies
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({message: 'your message'})
-})
-
 // WebSocket for future real-time features (not fully implemented in backend yet)
 export class WebSocketClient {
   constructor(url) {

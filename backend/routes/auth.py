@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import Blueprint, request, jsonify, session
 import logging
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import Session
 from database import get_db
@@ -156,12 +157,35 @@ def login():
 def logout():
     """Logout user"""
     try:
+        # Clear session data
         session.clear()
-        # Force session modification to ensure cookie is updated
         session.modified = True
+        
+        # Create response
         response = jsonify({'message': 'Logout successful'})
-        # Explicitly clear the session cookie
-        response.set_cookie('session', '', expires=0, httponly=True, samesite='Lax')
+        
+        # Clear session cookie with proper settings
+        is_production = os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER')
+        
+        if is_production:
+            response.set_cookie(
+                'session', 
+                '', 
+                expires=0, 
+                httponly=True, 
+                secure=True,
+                samesite='None'
+            )
+        else:
+            response.set_cookie(
+                'session', 
+                '', 
+                expires=0, 
+                httponly=True, 
+                secure=False,
+                samesite='Lax'
+            )
+        
         return response, 200
     except Exception as e:
         return jsonify({'error': f'Logout failed: {str(e)}'}), 500
@@ -219,10 +243,33 @@ def require_auth(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         user_id = session.get('user_id')
+        
+        # Enhanced debugging
         logging.info(f"Auth check - Session contents: {dict(session)}")
         logging.info(f"Auth check - User ID: {user_id}")
+        logging.info(f"Auth check - Session ID: {session.get('_id', 'No session ID')}")
+        logging.info(f"Auth check - Request headers: {dict(request.headers)}")
+        
         if not user_id:
-            logging.warning("Unauthorized access attempt: session empty")
+            logging.warning("Unauthorized access attempt: session empty or no user_id")
+            logging.warning(f"Session keys: {list(session.keys())}")
             return jsonify({'error': 'Authentication required'}), 401
+        
+        # Additional check: verify user still exists in database
+        try:
+            from database import get_db
+            from routes.models import User
+            db = next(get_db())
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                logging.warning(f"User {user_id} not found in database, clearing session")
+                session.clear()
+                session.modified = True
+                return jsonify({'error': 'Authentication required'}), 401
+            db.close()
+        except Exception as e:
+            logging.error(f"Database error during auth check: {e}")
+            return jsonify({'error': 'Authentication required'}), 401
+        
         return func(*args, **kwargs)
     return wrapper
