@@ -150,9 +150,6 @@ def login():
         finally:
             db.close()
             
-
-
-
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
 @auth_bp.route('/logout', methods=['POST'])
@@ -205,12 +202,11 @@ def check_auth():
                         }
                     }), 200
                 else:
-            finally:
-                db.close()
-
                     session.clear()
                     session.modified = True
                     return jsonify({'authenticated': False, 'reason': 'user_not_found'}), 200
+            finally:
+                db.close()
         else:
             return jsonify({'authenticated': False, 'reason': 'no_session'}), 200
     except Exception as e:
