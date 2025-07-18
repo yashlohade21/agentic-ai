@@ -40,7 +40,6 @@ def create_app():
     CORS(app, 
          supports_credentials=True, 
          origins=[
-             'https://5000-icezy88i9a1jl57vkj3uq-c80150bb.manusvm.computer',
              'http://localhost:3000', 
              'http://127.0.0.1:3000',
              'http://localhost:5173',
