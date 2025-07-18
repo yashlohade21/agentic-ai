@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use local development server by default, fallback to production
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ai-agent-with-frontend.onrender.com';
 
 // Create axios instance with default config
 const api = axios.create({
