@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-./google-services.json
+google-services.json
 # Distribution / packaging
 .Python
 build/
