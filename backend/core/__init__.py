@@ -1,8 +1,2 @@
-"""
-Multi-Agent AI System - Core Package
-"""
+# Core module for AI agent backend
 
-from .state_manager import StateManager
-from .config import Config, settings
-
-__all__ = ['StateManager', 'Config', 'settings']

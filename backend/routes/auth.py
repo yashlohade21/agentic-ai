@@ -3,7 +3,10 @@ from flask import Blueprint, request, jsonify, session
 import logging
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
-from firebase_config import db
+try:
+    from firebase_config import db
+except:
+    from firebase_config_mock import db
 from datetime import datetime
 import re
 

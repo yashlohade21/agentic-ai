@@ -11,6 +11,7 @@ import WelcomeMessage from './components/WelcomeMessage';
 import ChatInput from './components/ChatInput';
 import AuthForm from './components/AuthForm';
 import AgentStatus from './components/AgentStatus';
+import DeepLearningDashboard from './components/DeepLearningDashboard';
 import './App.css';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [currentView, setCurrentView] = useState('chat'); // 'chat' or 'deeplearning'
   const messagesEndRef = useRef(null);
 
   const agentIcons = {
@@ -173,6 +175,7 @@ function App() {
       setConnectionStatus('disconnected');
       setSystemStatus({ status: 'inactive', agents: [], session_requests: 0 });
       setActiveAgents([]);
+      setCurrentView('chat');
       
       toast.success('Logged out successfully', {
         icon: '👋',
@@ -187,6 +190,7 @@ function App() {
       setConnectionStatus('disconnected');
       setSystemStatus({ status: 'inactive', agents: [], session_requests: 0 });
       setActiveAgents([]);
+      setCurrentView('chat');
       
       toast.error('Logout completed (with errors)', {
         icon: '⚠️',
@@ -357,6 +361,102 @@ function App() {
     return <AuthForm onLogin={handleLogin} onRegister={handleRegister} isLoading={authLoading} />;
   }
 
+  // Render Deep Learning Dashboard
+  if (currentView === 'deeplearning') {
+    return (
+      <div className={`app ${darkMode ? 'dark' : ''}`}>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: darkMode ? '#1f2937' : '#ffffff',
+              color: darkMode ? '#f9fafb' : '#111827',
+              border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+            },
+          }}
+        />
+        
+        {/* Header for Deep Learning View */}
+        <motion.header 
+          className="app-header"
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="header-left">
+            <motion.button
+              className="menu-btn"
+              onClick={() => setCurrentView('chat')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <MessageSquare size={20} />
+            </motion.button>
+            
+            <motion.div 
+              className="app-title-section"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="app-icon-container">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                >
+                  <Brain size={32} className="app-icon" />
+                </motion.div>
+                <motion.div
+                  className="status-dot active"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </div>
+              <div>
+                <h1 className="gradient-text">Deep Learning Hub</h1>
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="header-right">
+            <motion.div 
+              className="user-info"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Users size={16} />
+              <span>{user?.username}</span>
+            </motion.div>
+
+            <div className="desktop-buttons">
+              <motion.button
+                className="header-btn"
+                onClick={toggleDarkMode}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </motion.button>
+
+              <motion.button
+                className="header-btn logout-btn"
+                onClick={handleLogout}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <LogOut size={20} />
+              </motion.button>
+            </div>
+          </div>
+        </motion.header>
+
+        <DeepLearningDashboard />
+      </div>
+    );
+  }
+
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
       <Toaster 
@@ -428,6 +528,16 @@ function App() {
           {/* Desktop buttons - visible on larger screens */}
           <div className="desktop-buttons">
               <motion.button
+                className="header-btn"
+                onClick={() => setCurrentView('deeplearning')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Deep Learning Hub"
+              >
+                <Brain size={20} />
+              </motion.button>
+
+              <motion.button
                     className="header-btn"
                     onClick={toggleDarkMode}
                     whileHover={{ scale: 1.05 }}
@@ -486,6 +596,17 @@ function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
           >
+            <motion.button
+              className="mobile-menu-item"
+              onClick={() => {
+                setCurrentView('deeplearning');
+                setShowMobileMenu(false);
+              }}
+            >
+              <Brain size={20} />
+              <span>Deep Learning</span>
+            </motion.button>
+
             <motion.button
               className="mobile-menu-item"
               onClick={() => {
@@ -683,7 +804,7 @@ function App() {
                       >
                         <Bot size={20} />
                       </motion.div>
-                      <span>AI is thinking...</span>
+                      <span>Binarybrained is thinking...</span>
                     </div>
                     <div className="message-content">
                       <div className="typing-indicator">
@@ -776,3 +897,4 @@ function App() {
 }
 
 export default App;
+

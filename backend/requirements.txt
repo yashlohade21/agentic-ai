@@ -16,7 +16,6 @@ distro==1.9.0
 filetype==1.2.0
 Flask==3.1.1
 flask-cors==6.0.0
-
 frozenlist==1.7.0
 google-ai-generativelanguage==0.6.18
 google-api-core==2.25.1
@@ -56,8 +55,7 @@ pathlib2==2.3.7.post1
 pluggy==1.6.0
 propcache==0.3.2
 proto-plus==1.26.1
-protobuf==6.31.1
-
+protobuf==6.30.0
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pydantic==2.11.7
@@ -75,16 +73,35 @@ rsa==4.9.1
 six==1.17.0
 sniffio==1.3.1
 soupsieve==2.7
-
 structlog==25.4.0
 tenacity==9.1.2
 typing-inspect==0.9.0
 typing-inspection==0.4.1
 typing_extensions==4.14.0
-urllib3==2.5.0
+urllib3==1.26.18
 Werkzeug==3.1.3
 wikipedia==1.4.0
 yarl==1.20.1
 zstandard==0.23.0
 firebase-admin==6.5.0
+# Media processing
+Pillow==10.0.1
+PyPDF2==3.0.1
+PyMuPDF==1.23.14
+pytesseract==0.3.10
 
+# ML libraries
+tensorflow==2.16.1
+# OR tensorflow-cpu==2.16.1
+torch==2.3.1
+torchvision==0.18.1
+
+# NLP & Transformers
+transformers==4.30.2
+tokenizers==0.13.3
+
+# Computer Vision
+opencv-python==4.8.1.78
+
+# Optional Scientific
+scikit-learn==1.4.2

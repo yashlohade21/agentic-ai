@@ -2,7 +2,10 @@ import logging
 import asyncio
 from flask import Blueprint, jsonify, request, session
 from datetime import datetime
-from firebase_config import db
+try:
+    from firebase_config import db
+except:
+    from firebase_config_mock import db
 from main import BinarybrainedSystem  # Import your actual AI system
 from routes.auth import require_auth
 

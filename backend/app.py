@@ -2,6 +2,8 @@ from flask import Flask, session
 from flask_cors import CORS
 from routes.auth import auth_bp
 from routes.chat import chat_bp
+from routes.dl_routes import dl_bp  # Import the new deep learning blueprint
+from core.model_manager_lite import model_manager # Import model manager
 
 import os
 import logging
@@ -56,6 +58,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api')
+    app.register_blueprint(dl_bp) # Register the deep learning blueprint
     
     # Health check endpoint
     @app.route('/api/health')
@@ -66,12 +69,33 @@ def create_app():
     def root():
         return {'message': 'AI Agent API is running'}
     
+    # Initialize models on startup
+    with app.app_context():
+        initialize_models()
 
-    
     return app
+
+def initialize_models():
+    """Initialize deep learning models on application startup"""
+    try:
+        # Example: Load a pre-trained sentiment analysis model
+        # model_manager.load_huggingface_model('sentiment_analyzer', 'cardiffnlp/twitter-roberta-base-sentiment-latest')
+        
+        # Example: Load a custom TensorFlow model
+        # model_manager.load_tensorflow_model('image_classifier', 'models/weights/my_classifier.h5')
+        
+        # Example: Load a PyTorch model
+        # model_manager.load_pytorch_model('custom_model', 'models/weights/my_pytorch_model.pt')
+        
+        logging.info("Model initialization completed")
+        
+    except Exception as e:
+        logging.error(f"Failed to initialize models: {str(e)}")
 
 # Create the app instance for imports
 app = create_app()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
