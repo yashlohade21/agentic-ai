@@ -1,250 +1,344 @@
-import logging
 import os
-import uuid
-from flask import Blueprint, jsonify, request, session
+import logging
+from flask import Blueprint, request, jsonify, session, current_app
 from werkzeug.utils import secure_filename
+from werkzeug.datastructures import FileStorage
+import uuid
 from datetime import datetime
-try:
-    from firebase_config import db
-except:
-    from firebase_config_mock import db
-from routes.auth import require_auth
-import base64
+from PIL import Image
 import mimetypes
+from routes.auth import require_auth
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Create a Blueprint for media routes
+# Create Blueprint for media routes
 media_bp = Blueprint("media", __name__)
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 ALLOWED_EXTENSIONS = {
-    'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp',
-    'mp3', 'wav', 'ogg', 'mp4', 'avi', 'mov', 'webm',
-    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'csv', 'json', 'xml', 'zip', 'rar'
+    'images': {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'},
+    'documents': {'pdf', 'txt', 'md', 'doc', 'docx'},
+    'audio': {'mp3', 'wav', 'ogg', 'm4a'},
+    'video': {'mp4', 'avi', 'mov', 'mkv', 'webm'}
 }
+
+def ensure_upload_directory():
+    """Ensure upload directory exists"""
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+        logger.info(f"Created upload directory: {UPLOAD_FOLDER}")
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def get_file_type(filename):
-    """Determine file type category"""
-    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    if '.' not in filename:
+        return False, None
     
-    if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']:
-        return 'image'
-    elif ext in ['mp3', 'wav', 'ogg']:
-        return 'audio'
-    elif ext in ['mp4', 'avi', 'mov', 'webm']:
-        return 'video'
-    elif ext in ['pdf']:
-        return 'pdf'
-    elif ext in ['txt', 'csv', 'json', 'xml']:
-        return 'text'
-    elif ext in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']:
-        return 'document'
-    elif ext in ['zip', 'rar']:
-        return 'archive'
-    else:
-        return 'other'
+    extension = filename.rsplit('.', 1)[1].lower()
+    
+    for file_type, extensions in ALLOWED_EXTENSIONS.items():
+        if extension in extensions:
+            return True, file_type
+    
+    return False, None
 
-@media_bp.route("/media/upload", methods=["POST"])
+def get_file_info(file_path):
+    """Get comprehensive file information"""
+    try:
+        file_stats = os.stat(file_path)
+        file_size = file_stats.st_size
+        
+        # Get MIME type
+        mime_type, _ = mimetypes.guess_type(file_path)
+        
+        file_info = {
+            'size': file_size,
+            'size_human': format_file_size(file_size),
+            'mime_type': mime_type,
+            'created_at': datetime.fromtimestamp(file_stats.st_ctime).isoformat(),
+            'modified_at': datetime.fromtimestamp(file_stats.st_mtime).isoformat()
+        }
+        
+        # Additional info for images
+        if mime_type and mime_type.startswith('image/'):
+            try:
+                with Image.open(file_path) as img:
+                    file_info.update({
+                        'width': img.width,
+                        'height': img.height,
+                        'format': img.format
+                    })
+            except Exception as e:
+                logger.warning(f"Could not get image info for {file_path}: {e}")
+        
+        return file_info
+    except Exception as e:
+        logger.error(f"Error getting file info for {file_path}: {e}")
+        return {}
+
+def format_file_size(size_bytes):
+    """Format file size in human readable format"""
+    if size_bytes == 0:
+        return "0B"
+    
+    size_names = ["B", "KB", "MB", "GB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    
+    return f"{size_bytes:.1f}{size_names[i]}"
+
+def process_image(file_path, max_width=1920, max_height=1080, quality=85):
+    """Process and optimize uploaded images"""
+    try:
+        with Image.open(file_path) as img:
+            # Convert to RGB if necessary
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+            
+            # Resize if too large
+            if img.width > max_width or img.height > max_height:
+                img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                logger.info(f"Resized image to {img.width}x{img.height}")
+            
+            # Save optimized version
+            img.save(file_path, 'JPEG', quality=quality, optimize=True)
+            logger.info(f"Optimized image saved: {file_path}")
+            
+    except Exception as e:
+        logger.error(f"Error processing image {file_path}: {e}")
+
+@media_bp.route('/upload', methods=['POST'])
 @require_auth
 def upload_file():
     """Handle file upload"""
     try:
-        user_id = session["user_id"]
+        ensure_upload_directory()
         
         # Check if file is present in request
         if 'file' not in request.files:
-            return jsonify({"error": "No file provided"}), 400
+            return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
         
         # Check if file is selected
         if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
+            return jsonify({'error': 'No file selected'}), 400
         
         # Check file size
-        if request.content_length > MAX_FILE_SIZE:
-            return jsonify({"error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"}), 400
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
         
-        # Check file extension
-        if not allowed_file(file.filename):
-            return jsonify({"error": "File type not allowed"}), 400
+        if file_size > MAX_FILE_SIZE:
+            return jsonify({
+                'error': f'File too large. Maximum size is {format_file_size(MAX_FILE_SIZE)}'
+            }), 400
         
-        # Create upload directory if it doesn't exist
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        # Check file type
+        is_allowed, file_type = allowed_file(file.filename)
+        if not is_allowed:
+            return jsonify({
+                'error': f'File type not allowed. Supported types: {", ".join(sum(ALLOWED_EXTENSIONS.values(), set()))}'
+            }), 400
         
         # Generate unique filename
-        file_id = str(uuid.uuid4())
         original_filename = secure_filename(file.filename)
-        file_extension = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
-        filename = f"{file_id}.{file_extension}"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file_extension = original_filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        
+        # Create user-specific directory
+        user_id = session.get('user_id', 'anonymous')
+        user_upload_dir = os.path.join(UPLOAD_FOLDER, user_id)
+        if not os.path.exists(user_upload_dir):
+            os.makedirs(user_upload_dir)
+        
+        file_path = os.path.join(user_upload_dir, unique_filename)
         
         # Save file
-        file.save(filepath)
+        file.save(file_path)
+        logger.info(f"File saved: {file_path}")
         
-        # Get file info
-        file_size = os.path.getsize(filepath)
-        file_type = get_file_type(original_filename)
-        mime_type = mimetypes.guess_type(original_filename)[0] or 'application/octet-stream'
+        # Process image if it's an image file
+        if file_type == 'images':
+            process_image(file_path)
         
-        # Save file metadata to database
-        try:
-            files_ref = db.collection("uploaded_files")
-            file_doc = files_ref.document(file_id)
-            file_doc.set({
-                "file_id": file_id,
-                "original_filename": original_filename,
-                "filename": filename,
-                "filepath": filepath,
-                "file_size": file_size,
-                "file_type": file_type,
-                "mime_type": mime_type,
-                "user_id": user_id,
-                "upload_timestamp": datetime.now(),
-                "status": "uploaded"
-            })
-            
-            logging.info(f"File uploaded successfully: {original_filename} by user {user_id}")
-            
-        except Exception as db_error:
-            logging.error(f"Database error saving file metadata: {db_error}")
-            # Clean up file if database save fails
-            try:
-                os.remove(filepath)
-            except:
-                pass
-            return jsonify({"error": "Failed to save file metadata"}), 500
+        # Get file information
+        file_info = get_file_info(file_path)
         
-        return jsonify({
-            "success": True,
-            "file_id": file_id,
-            "original_filename": original_filename,
-            "file_size": file_size,
-            "file_type": file_type,
-            "mime_type": mime_type,
-            "message": "File uploaded successfully"
-        }), 200
-        
-    except Exception as e:
-        logging.error(f"Error in file upload: {e}", exc_info=True)
-        return jsonify({"error": "File upload failed"}), 500
-
-@media_bp.route("/media/files", methods=["GET"])
-@require_auth
-def get_user_files():
-    """Get list of files uploaded by the current user"""
-    try:
-        user_id = session["user_id"]
-        
-        files_ref = db.collection("uploaded_files")
-        query = files_ref.where("user_id", "==", user_id).limit(50)
-        files = []
-        
-        for doc in query.stream():
-            file_data = doc.to_dict()
-            files.append({
-                "file_id": file_data.get("file_id"),
-                "original_filename": file_data.get("original_filename"),
-                "file_size": file_data.get("file_size"),
-                "file_type": file_data.get("file_type"),
-                "mime_type": file_data.get("mime_type"),
-                "upload_timestamp": file_data.get("upload_timestamp"),
-                "status": file_data.get("status")
-            })
-        
-        return jsonify({
-            "success": True,
-            "files": files
-        }), 200
-        
-    except Exception as e:
-        logging.error(f"Error getting user files: {e}", exc_info=True)
-        return jsonify({"error": "Failed to retrieve files"}), 500
-
-@media_bp.route("/media/file/<file_id>", methods=["GET"])
-@require_auth
-def get_file_info(file_id):
-    """Get information about a specific file"""
-    try:
-        user_id = session["user_id"]
-        
-        files_ref = db.collection("uploaded_files")
-        file_doc = files_ref.document(file_id).get()
-        
-        if not file_doc.exists:
-            return jsonify({"error": "File not found"}), 404
-        
-        file_data = file_doc.to_dict()
-        
-        # Check if user owns the file
-        if file_data.get("user_id") != user_id:
-            return jsonify({"error": "Access denied"}), 403
-        
-        return jsonify({
-            "success": True,
-            "file": {
-                "file_id": file_data.get("file_id"),
-                "original_filename": file_data.get("original_filename"),
-                "file_size": file_data.get("file_size"),
-                "file_type": file_data.get("file_type"),
-                "mime_type": file_data.get("mime_type"),
-                "upload_timestamp": file_data.get("upload_timestamp"),
-                "status": file_data.get("status")
+        # Prepare response
+        response_data = {
+            'success': True,
+            'message': 'File uploaded successfully',
+            'file': {
+                'id': unique_filename.split('.')[0],  # UUID without extension
+                'original_name': original_filename,
+                'filename': unique_filename,
+                'file_type': file_type,
+                'path': file_path,
+                'url': f'/api/media/file/{user_id}/{unique_filename}',
+                **file_info
             }
-        }), 200
+        }
+        
+        return jsonify(response_data), 200
         
     except Exception as e:
-        logging.error(f"Error getting file info: {e}", exc_info=True)
-        return jsonify({"error": "Failed to retrieve file information"}), 500
+        logger.error(f"Upload error: {e}")
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
 
-@media_bp.route("/media/file/<file_id>", methods=["DELETE"])
+@media_bp.route('/file/<user_id>/<filename>', methods=['GET'])
+def serve_file(user_id, filename):
+    """Serve uploaded files"""
+    try:
+        # Security check - ensure filename is secure
+        secure_filename_check = secure_filename(filename)
+        if secure_filename_check != filename:
+            return jsonify({'error': 'Invalid filename'}), 400
+        
+        file_path = os.path.join(UPLOAD_FOLDER, user_id, filename)
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Send file
+        from flask import send_file
+        return send_file(file_path)
+        
+    except Exception as e:
+        logger.error(f"Error serving file {filename}: {e}")
+        return jsonify({'error': 'Failed to serve file'}), 500
+
+@media_bp.route('/files', methods=['GET'])
+@require_auth
+def list_user_files():
+    """List all files uploaded by the current user"""
+    try:
+        user_id = session.get('user_id', 'anonymous')
+        user_upload_dir = os.path.join(UPLOAD_FOLDER, user_id)
+        
+        if not os.path.exists(user_upload_dir):
+            return jsonify({'files': []}), 200
+        
+        files = []
+        for filename in os.listdir(user_upload_dir):
+            file_path = os.path.join(user_upload_dir, filename)
+            if os.path.isfile(file_path):
+                # Get file type
+                _, file_type = allowed_file(filename)
+                
+                file_info = get_file_info(file_path)
+                
+                files.append({
+                    'id': filename.split('.')[0],
+                    'filename': filename,
+                    'file_type': file_type,
+                    'url': f'/api/media/file/{user_id}/{filename}',
+                    **file_info
+                })
+        
+        # Sort by creation time (newest first)
+        files.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return jsonify({'files': files}), 200
+        
+    except Exception as e:
+        logger.error(f"Error listing files: {e}")
+        return jsonify({'error': 'Failed to list files'}), 500
+
+@media_bp.route('/file/<file_id>', methods=['DELETE'])
 @require_auth
 def delete_file(file_id):
-    """Delete a file"""
+    """Delete a specific file"""
     try:
-        user_id = session["user_id"]
+        user_id = session.get('user_id', 'anonymous')
+        user_upload_dir = os.path.join(UPLOAD_FOLDER, user_id)
         
-        files_ref = db.collection("uploaded_files")
-        file_doc = files_ref.document(file_id).get()
+        # Find file with matching ID
+        target_file = None
+        for filename in os.listdir(user_upload_dir):
+            if filename.startswith(file_id):
+                target_file = filename
+                break
         
-        if not file_doc.exists:
-            return jsonify({"error": "File not found"}), 404
+        if not target_file:
+            return jsonify({'error': 'File not found'}), 404
         
-        file_data = file_doc.to_dict()
+        file_path = os.path.join(user_upload_dir, target_file)
+        os.remove(file_path)
         
-        # Check if user owns the file
-        if file_data.get("user_id") != user_id:
-            return jsonify({"error": "Access denied"}), 403
-        
-        # Delete physical file
-        filepath = file_data.get("filepath")
-        if filepath and os.path.exists(filepath):
-            try:
-                os.remove(filepath)
-            except Exception as e:
-                logging.warning(f"Failed to delete physical file {filepath}: {e}")
-        
-        # Delete from database
-        files_ref.document(file_id).delete()
-        
-        logging.info(f"File deleted successfully: {file_id} by user {user_id}")
-        
-        return jsonify({
-            "success": True,
-            "message": "File deleted successfully"
-        }), 200
+        logger.info(f"File deleted: {file_path}")
+        return jsonify({'message': 'File deleted successfully'}), 200
         
     except Exception as e:
-        logging.error(f"Error deleting file: {e}", exc_info=True)
-        return jsonify({"error": "Failed to delete file"}), 500
+        logger.error(f"Error deleting file {file_id}: {e}")
+        return jsonify({'error': 'Failed to delete file'}), 500
+
+@media_bp.route('/analyze', methods=['POST'])
+@require_auth
+def analyze_media():
+    """Analyze uploaded media and provide insights"""
+    try:
+        data = request.get_json()
+        file_id = data.get('file_id')
+        
+        if not file_id:
+            return jsonify({'error': 'File ID required'}), 400
+        
+        user_id = session.get('user_id', 'anonymous')
+        user_upload_dir = os.path.join(UPLOAD_FOLDER, user_id)
+        
+        # Find file
+        target_file = None
+        for filename in os.listdir(user_upload_dir):
+            if filename.startswith(file_id):
+                target_file = filename
+                break
+        
+        if not target_file:
+            return jsonify({'error': 'File not found'}), 404
+        
+        file_path = os.path.join(user_upload_dir, target_file)
+        _, file_type = allowed_file(target_file)
+        
+        analysis = {'file_type': file_type, 'analysis': {}}
+        
+        # Basic analysis based on file type
+        if file_type == 'images':
+            try:
+                with Image.open(file_path) as img:
+                    analysis['analysis'] = {
+                        'dimensions': f"{img.width}x{img.height}",
+                        'format': img.format,
+                        'mode': img.mode,
+                        'has_transparency': img.mode in ('RGBA', 'LA', 'P'),
+                        'estimated_colors': len(img.getcolors(maxcolors=256)) if img.getcolors(maxcolors=256) else 'Many'
+                    }
+            except Exception as e:
+                analysis['analysis']['error'] = f"Could not analyze image: {e}"
+        
+        elif file_type == 'documents':
+            # Basic document analysis
+            try:
+                file_size = os.path.getsize(file_path)
+                analysis['analysis'] = {
+                    'size_category': 'small' if file_size < 1024*1024 else 'large',
+                    'estimated_pages': max(1, file_size // (1024 * 2))  # Rough estimate
+                }
+            except Exception as e:
+                analysis['analysis']['error'] = f"Could not analyze document: {e}"
+        
+        return jsonify(analysis), 200
+        
+    except Exception as e:
+        logger.error(f"Error analyzing media: {e}")
+        return jsonify({'error': 'Analysis failed'}), 500
+
+# Initialize upload directory on module import
+ensure_upload_directory()
 

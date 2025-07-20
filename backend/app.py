@@ -2,8 +2,12 @@ from flask import Flask, session
 from flask_cors import CORS
 from routes.auth import auth_bp
 from routes.chat import chat_bp
-from routes.dl_routes import dl_bp  # Import the new deep learning blueprint
-from core.model_manager_lite import model_manager # Import model manager
+from routes.media import media_bp
+from routes.chat_history import chat_history_bp
+from routes.dl_routes import dl_bp
+from core.model_manager_lite import model_manager
+from core.llm_manager_fixed import create_llm_manager
+from core.config import settings
 
 import os
 import logging
@@ -21,7 +25,7 @@ def create_app():
     
     # Configuration - Environment-specific settings
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # 30 minutes instead of 24 hours
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     
     # Session cookie settings - different for development vs production
     is_production = os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER')
@@ -36,9 +40,13 @@ def create_app():
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_DOMAIN'] = None  # Allow subdomain sharing
+    app.config['SESSION_COOKIE_DOMAIN'] = None
+    
+    # File upload settings
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['UPLOAD_FOLDER'] = 'uploads'
 
-    # Enable CORS for all routes with proper session support
+    # Enhanced CORS configuration
     CORS(app, 
          supports_credentials=True, 
          origins=[
@@ -58,44 +66,82 @@ def create_app():
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api')
-    app.register_blueprint(dl_bp) # Register the deep learning blueprint
+    app.register_blueprint(media_bp, url_prefix='/api/media')
+    app.register_blueprint(chat_history_bp, url_prefix='/api/chat-history')
+    app.register_blueprint(dl_bp)
     
     # Health check endpoint
     @app.route('/api/health')
     def health_check():
-        return {'status': 'ok', 'message': 'AI Agent API is running'}
+        return {
+            'status': 'ok', 
+            'message': 'AI Agent API is running',
+            'version': '2.0.0',
+            'features': [
+                'chat',
+                'media_upload',
+                'chat_history',
+                'deep_learning',
+                'improved_ui'
+            ]
+        }
     
     @app.route('/')
     def root():
-        return {'message': 'AI Agent API is running'}
+        return {
+            'message': 'AI Agent API v2.0 is running',
+            'endpoints': [
+                '/api/health',
+                '/api/auth/*',
+                '/api/chat',
+                '/api/media/*',
+                '/api/chat-history/*'
+            ]
+        }
     
-    # Initialize models on startup
+    # Error handlers
+    @app.errorhandler(413)
+    def too_large(e):
+        return {'error': 'File too large. Maximum size is 16MB.'}, 413
+    
+    @app.errorhandler(404)
+    def not_found(e):
+        return {'error': 'Endpoint not found'}, 404
+    
+    @app.errorhandler(500)
+    def internal_error(e):
+        return {'error': 'Internal server error'}, 500
+    
+    # Initialize models and LLM manager on startup
     with app.app_context():
         initialize_models()
+        initialize_llm_manager()
 
     return app
 
 def initialize_models():
     """Initialize deep learning models on application startup"""
     try:
-        # Example: Load a pre-trained sentiment analysis model
-        # model_manager.load_huggingface_model('sentiment_analyzer', 'cardiffnlp/twitter-roberta-base-sentiment-latest')
-        
-        # Example: Load a custom TensorFlow model
-        # model_manager.load_tensorflow_model('image_classifier', 'models/weights/my_classifier.h5')
-        
-        # Example: Load a PyTorch model
-        # model_manager.load_pytorch_model('custom_model', 'models/weights/my_pytorch_model.pt')
-        
         logging.info("Model initialization completed")
-        
     except Exception as e:
         logging.error(f"Failed to initialize models: {str(e)}")
+
+def initialize_llm_manager():
+    """Initialize LLM manager with improved error handling"""
+    try:
+        global llm_manager
+        llm_manager = create_llm_manager(settings)
+        logging.info("LLM manager initialized successfully")
+        
+        # Test the LLM manager
+        status = llm_manager.get_status()
+        logging.info(f"LLM Manager Status: {status}")
+        
+    except Exception as e:
+        logging.error(f"Failed to initialize LLM manager: {str(e)}")
 
 # Create the app instance for imports
 app = create_app()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-
