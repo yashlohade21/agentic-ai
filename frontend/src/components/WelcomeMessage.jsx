@@ -153,7 +153,7 @@ const WelcomeMessage = ({ onExampleClick }) => {
             ease: "linear"
           }}
         >
-          Welcome to BinaryBrained AI
+          Welcome to BinaryBrained
         </motion.h1>
       </motion.div>
 

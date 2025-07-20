@@ -12,6 +12,7 @@ import ChatInput from './components/ChatInput';
 import AuthForm from './components/AuthForm';
 import AgentStatus from './components/AgentStatus';
 import DeepLearningDashboard from './components/DeepLearningDashboard';
+
 import './App.css';
 
 function App() {
@@ -155,7 +156,7 @@ function App() {
       const response = await agentApi.register(userData);
       setUser(response.user);
       setIsAuthenticated(true);
-      toast.success(`Welcome to BinaryBrained AI, ${response.user.username}!`, {
+      toast.success(`Welcome to BinaryBrained, ${response.user.username}!`, {
         icon: '🎉',
         duration: 4000,
       });
@@ -336,7 +337,7 @@ function App() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            BinaryBrained AI
+            BinaryBrained
           </motion.h2>
           <motion.p 
             initial={{ y: 20, opacity: 0 }}
@@ -508,7 +509,7 @@ function App() {
               />
             </div>
             <div>
-              <h1 className="gradient-text">BinaryBrained AI</h1>
+              <h1 className="gradient-text">Binarybrained</h1>
             </div>
           </motion.div>
         </div>

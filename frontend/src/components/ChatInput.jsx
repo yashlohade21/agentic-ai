@@ -230,7 +230,7 @@ const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyP
         transition={{ delay: 0.5 }}
       >
         <p>
-          BinaryBrained AI can make mistakes. Consider checking important information.
+          BinaryBrained can make mistakes. Consider checking important information.
         </p>
       </motion.div>
     </div>

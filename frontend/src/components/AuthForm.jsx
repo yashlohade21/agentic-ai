@@ -167,7 +167,7 @@ const AuthForm = ({ onLogin, onRegister, isLoading }) => {
             </motion.div>
             
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
-              BinaryBrained AI
+              BinaryBrained
             </h1>
             
             <AnimatePresence mode="wait">
