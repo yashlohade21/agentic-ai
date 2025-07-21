@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Upload, X, File, Image, Video, Music, FileText, 
-  Check, AlertCircle, Trash2, Eye, Download
+  Check, AlertCircle, Trash2, Eye, Download, Loader2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -92,7 +92,15 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
         });
       }, 1000);
 
-      return result.file;
+      return {
+        id: fileId,
+        original_name: file.name,
+        file_type: file.type.startsWith('image/') ? 'images' : 
+                  file.type.startsWith('video/') ? 'video' :
+                  file.type.startsWith('audio/') ? 'audio' : 'documents',
+        size_human: formatFileSize(file.size),
+        url: URL.createObjectURL(file)
+      };
     } catch (error) {
       toast.error(error.message);
       throw error;
@@ -161,40 +169,45 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
 
   const getFileIcon = (fileType) => {
     const IconComponent = fileTypeIcons[fileType] || fileTypeIcons.default;
-    return <IconComponent size={20} />;
+    return <IconComponent size={18} className="text-gray-600" />;
   };
 
   return (
     <motion.div
-      className="media-upload-overlay"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={(e) => e.target === e.currentTarget && onClose?.()}
     >
       <motion.div
-        className="media-upload-modal"
-        initial={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
+        exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: "spring", damping: 20 }}
       >
-        <div className="modal-header">
-          <h3>Upload Media</h3>
-          <button className="close-btn" onClick={onClose}>
-            <X size={20} />
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 className="font-semibold text-lg text-gray-800">Upload Media</h3>
+          <button 
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            onClick={onClose}
+          >
+            <X size={20} className="text-gray-500" />
           </button>
         </div>
 
-        <div className="modal-content">
+        <div className="flex-1 overflow-y-auto p-4">
           {/* Upload Area */}
           <div
-            className={`upload-area ${dragActive ? 'drag-active' : ''} ${uploading ? 'uploading' : ''}`}
+            className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+              dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+            } ${uploading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => !uploading && fileInputRef.current?.click()}
           >
             <input
               ref={fileInputRef}
@@ -202,36 +215,40 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
               multiple
               accept="image/*,video/*,audio/*,.pdf,.txt,.md"
               onChange={handleFileSelect}
-              style={{ display: 'none' }}
+              className="hidden"
+              disabled={uploading}
             />
 
             <motion.div
-              className="upload-content"
-              animate={{ scale: dragActive ? 1.05 : 1 }}
+              className="flex flex-col items-center justify-center gap-3"
+              animate={{ scale: dragActive ? 1.02 : 1 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
               <motion.div
-                className="upload-icon"
                 animate={{ 
                   rotate: uploading ? 360 : 0,
-                  scale: dragActive ? 1.2 : 1
+                  scale: dragActive ? 1.1 : 1
                 }}
                 transition={{ 
                   rotate: { duration: 2, repeat: uploading ? Infinity : 0, ease: "linear" },
                   scale: { type: "spring", stiffness: 300 }
                 }}
               >
-                <Upload size={48} />
+                {uploading ? (
+                  <Loader2 className="text-blue-500 animate-spin" size={32} />
+                ) : (
+                  <Upload className="text-gray-400" size={32} />
+                )}
               </motion.div>
               
-              <h4>
-                {uploading ? 'Uploading...' : 
-                 dragActive ? 'Drop files here' : 'Upload Media Files'}
+              <h4 className="font-medium text-gray-800">
+                {uploading ? 'Uploading files...' : 
+                 dragActive ? 'Drop files here' : 'Click to upload or drag and drop'}
               </h4>
               
-              <p>
-                Drag and drop files here, or click to select<br />
-                <small>Supports images, videos, audio, documents (max 16MB each)</small>
+              <p className="text-sm text-gray-500">
+                Supports images, videos, audio, and documents<br />
+                <span className="text-xs">(Max 16MB per file)</span>
               </p>
             </motion.div>
           </div>
@@ -240,22 +257,24 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
           <AnimatePresence>
             {Object.keys(uploadProgress).length > 0 && (
               <motion.div
-                className="upload-progress-section"
+                className="mt-4 space-y-2"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
               >
                 {Object.entries(uploadProgress).map(([fileId, progress]) => (
-                  <div key={fileId} className="progress-item">
-                    <div className="progress-bar">
+                  <div key={fileId} className="flex items-center gap-3">
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <motion.div
-                        className="progress-fill"
+                        className="h-full bg-blue-500"
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 0.3 }}
                       />
                     </div>
-                    <span>{Math.round(progress)}%</span>
+                    <span className="text-xs font-medium text-gray-600 w-10">
+                      {Math.round(progress)}%
+                    </span>
                   </div>
                 ))}
               </motion.div>
@@ -264,51 +283,61 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
 
           {/* Uploaded Files */}
           {uploadedFiles.length > 0 && (
-            <div className="uploaded-files-section">
-              <h4>Uploaded Files ({uploadedFiles.length}/{maxFiles})</h4>
-              <div className="files-list">
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-800">
+                  Uploaded Files ({uploadedFiles.length}/{maxFiles})
+                </h4>
+                {uploadedFiles.length > 0 && (
+                  <button 
+                    onClick={() => setUploadedFiles([])}
+                    className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                  >
+                    <Trash2 size={14} />
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
                 <AnimatePresence>
-                  {uploadedFiles.map((file, index) => (
+                  {uploadedFiles.map((file) => (
                     <motion.div
                       key={file.id}
-                      className="file-item"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.1 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <div className="file-info">
-                        <div className="file-icon">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 bg-white rounded-md border border-gray-200">
                           {getFileIcon(file.file_type)}
                         </div>
-                        <div className="file-details">
-                          <span className="file-name">{file.original_name}</span>
-                          <span className="file-meta">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {file.original_name}
+                          </p>
+                          <p className="text-xs text-gray-500">
                             {file.size_human} • {file.file_type}
-                          </span>
+                          </p>
                         </div>
                       </div>
                       
-                      <div className="file-actions">
-                        <motion.button
-                          className="action-btn view-btn"
+                      <div className="flex items-center gap-2">
+                        <button
                           onClick={() => window.open(file.url, '_blank')}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          className="p-1.5 text-gray-500 hover:text-blue-600 transition-colors"
                           title="View file"
                         >
                           <Eye size={16} />
-                        </motion.button>
-                        
-                        <motion.button
-                          className="action-btn delete-btn"
+                        </button>
+                        <button
                           onClick={() => removeFile(file.id)}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          className="p-1.5 text-gray-500 hover:text-red-600 transition-colors"
                           title="Remove file"
                         >
                           <Trash2 size={16} />
-                        </motion.button>
+                        </button>
                       </div>
                     </motion.div>
                   ))}
@@ -318,30 +347,28 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
           )}
         </div>
 
-        <div className="modal-footer">
-          <motion.button
-            className="btn btn-secondary"
+        <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+          <button
             onClick={onClose}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Close
-          </motion.button>
-          
-          {uploadedFiles.length > 0 && (
-            <motion.button
-              className="btn btn-primary"
-              onClick={() => {
-                toast.success(`${uploadedFiles.length} files ready to use`);
-                onClose?.();
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Check size={16} />
-              Done ({uploadedFiles.length})
-            </motion.button>
-          )}
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              toast.success(`${uploadedFiles.length} files ready to use`);
+              onClose?.();
+            }}
+            disabled={uploadedFiles.length === 0}
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              uploadedFiles.length === 0
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            <Check size={16} />
+            Done ({uploadedFiles.length})
+          </button>
         </div>
       </motion.div>
     </motion.div>
@@ -349,4 +376,3 @@ const MediaUpload = ({ onFileUpload, onClose, maxFiles = 5 }) => {
 };
 
 export default MediaUpload;
-

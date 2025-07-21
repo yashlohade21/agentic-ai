@@ -12,7 +12,6 @@ import ChatInput from './components/ChatInput';
 import AuthForm from './components/AuthForm';
 import AgentStatus from './components/AgentStatus';
 import DeepLearningDashboard from './components/DeepLearningDashboard';
-
 import './App.css';
 
 function App() {

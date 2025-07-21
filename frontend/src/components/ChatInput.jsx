@@ -1,238 +1,250 @@
-import React, { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Send, Mic, Paperclip, Smile, Zap } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Send, Paperclip, Mic, Square, Smile, Image, 
+  FileText, Video, Music, X, Plus
+} from 'lucide-react';
+import MediaUpload from './MediaUpload';
 
-const ChatInput = ({ inputValue, setInputValue, onSendMessage, isLoading, onKeyPress }) => {
+const ChatInput = ({ 
+  inputValue, 
+  setInputValue, 
+  onSendMessage, 
+  isLoading, 
+  onKeyPress,
+  onFileUpload 
+}) => {
+  const [showMediaUpload, setShowMediaUpload] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]);
   const textareaRef = useRef(null);
+  const attachMenuRef = useRef(null);
 
+  // Auto-resize textarea
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
     }
   }, [inputValue]);
 
-  const handleVoiceInput = () => {
-    toast.success('Voice input coming soon!', {
-      icon: '🎤',
-      duration: 2000,
-    });
+  // Close attach menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target)) {
+        setShowAttachMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSend = () => {
+    if (inputValue.trim() || attachedFiles.length > 0) {
+      onSendMessage();
+      setAttachedFiles([]);
+    }
   };
 
-  const handleFileAttach = () => {
-    toast.success('File attachment coming soon!', {
-      icon: '📎',
-      duration: 2000,
-    });
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
-  const handleEmojiPicker = () => {
-    toast.success('Emoji picker coming soon!', {
-      icon: '😊',
-      duration: 2000,
-    });
+  const handleFileUpload = (file) => {
+    setAttachedFiles(prev => [...prev, file]);
+    if (onFileUpload) {
+      onFileUpload(file);
+    }
   };
 
-  const quickPrompts = [
-    "Explain this concept",
-    "Write code for",
-    "Help me with",
-    "Analyze this"
+  const removeAttachedFile = (fileId) => {
+    setAttachedFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const startRecording = () => {
+    setIsRecording(true);
+    // TODO: Implement voice recording
+  };
+
+  const stopRecording = () => {
+    setIsRecording(false);
+    // TODO: Stop voice recording and process
+  };
+
+  const attachmentOptions = [
+    { icon: Image, label: 'Images', action: () => setShowMediaUpload(true) },
+    { icon: FileText, label: 'Documents', action: () => setShowMediaUpload(true) },
+    { icon: Video, label: 'Videos', action: () => setShowMediaUpload(true) },
+    { icon: Music, label: 'Audio', action: () => setShowMediaUpload(true) },
   ];
 
   return (
-    <div className="chat-input-wrapper">
-      {/* Quick Prompts */}
-      <motion.div 
-        className="quick-prompts"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {quickPrompts.map((prompt, index) => (
-          <motion.button
-            key={prompt}
-            className="quick-prompt-btn"
-            onClick={() => setInputValue(prompt + " ")}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+    <div className="w-full max-w-4xl mx-auto px-4 pb-4">
+      {/* Attached Files Preview */}
+      <AnimatePresence>
+        {attachedFiles.length > 0 && (
+          <motion.div
+            className="mb-2 bg-white/80 rounded-lg p-2 shadow-sm"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <Zap size={12} />
-            <span>{prompt}</span>
-          </motion.button>
-        ))}
-      </motion.div>
+            <div className="flex flex-wrap gap-2">
+              {attachedFiles.map((file, index) => (
+                <motion.div
+                  key={file.id}
+                  className="flex items-center bg-gray-50 rounded-lg p-2 pr-3 gap-2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div className="flex-shrink-0">
+                    {file.file_type === 'images' ? (
+                      <img 
+                        src={file.url} 
+                        alt={file.original_name} 
+                        className="w-10 h-10 object-cover rounded-md" 
+                      />
+                    ) : (
+                      <div className="w-10 h-10 flex items-center justify-center bg-gray-200 rounded-md">
+                        {file.file_type === 'documents' && <FileText size={16} className="text-gray-600" />}
+                        {file.file_type === 'video' && <Video size={16} className="text-gray-600" />}
+                        {file.file_type === 'audio' && <Music size={16} className="text-gray-600" />}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{file.original_name}</p>
+                    <p className="text-xs text-gray-500">{file.size_human}</p>
+                  </div>
+                  <button
+                    className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                    onClick={() => removeAttachedFile(file.id)}
+                  >
+                    <X size={14} />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Main Input Container */}
-      <motion.div
-        className="chat-input-container"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        whileFocusWithin={{ 
-          boxShadow: "0 0 0 3px rgba(99, 102, 241, 0.1)",
-          borderColor: "rgb(99, 102, 241)"
-        }}
-      >
-        {/* Input Area */}
-        <div className="input-area">
-          {/* Action Buttons Left */}
-          <div className="action-buttons-left">
-            <motion.button
-              className="action-btn"
-              onClick={handleFileAttach}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              title="Attach file"
+      {/* Main Input Area */}
+      <div className="relative bg-white rounded-xl shadow-md border border-gray-200">
+        <div className="flex items-end p-2">
+          {/* Attachment Menu */}
+          <div className="relative mr-2" ref={attachMenuRef}>
+            <button
+              className={`p-2 rounded-lg ${showAttachMenu ? 'bg-gray-100' : 'hover:bg-gray-100'} transition-colors`}
+              onClick={() => setShowAttachMenu(!showAttachMenu)}
+              disabled={isLoading}
             >
-              <Paperclip size={18} />
-            </motion.button>
-            
-            <motion.button
-              className="action-btn"
-              onClick={handleEmojiPicker}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              title="Add emoji"
-            >
-              <Smile size={18} />
-            </motion.button>
+              <Plus size={20} className={`transition-transform ${showAttachMenu ? 'rotate-45' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {showAttachMenu && (
+                <motion.div
+                  className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="grid grid-cols-2 gap-1 p-1">
+                    {attachmentOptions.map((option, index) => (
+                      <button
+                        key={option.label}
+                        className="flex items-center p-2 text-sm hover:bg-gray-100 rounded-md transition-colors"
+                        onClick={() => {
+                          option.action();
+                          setShowAttachMenu(false);
+                        }}
+                      >
+                        <option.icon size={16} className="mr-2" />
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Text Input */}
-          <div className="text-input-wrapper">
+          <div className="flex-1 min-w-0">
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={onKeyPress}
-              placeholder="Type your message here..."
-              className="text-input"
-              rows={1}
+              onKeyDown={handleKeyDown}
+              placeholder={isLoading ? "AI is thinking..." : "Type your message..."}
               disabled={isLoading}
+              className="w-full min-h-[40px] max-h-[120px] px-3 py-2 bg-transparent outline-none resize-none"
+              rows={1}
             />
-            
-            {/* Character Counter */}
-            {inputValue.length > 0 && (
-              <motion.div
-                className="char-counter"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {inputValue.length}
-              </motion.div>
-            )}
           </div>
 
-          {/* Action Buttons Right */}
-          <div className="action-buttons-right">
-            <motion.button
-              className="action-btn"
-              onClick={handleVoiceInput}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              title="Voice input"
+          {/* Right Controls */}
+          <div className="flex items-center ml-2">
+            {/* Voice Recording */}
+            <button
+              className={`p-2 rounded-lg ${isRecording ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100'} transition-colors`}
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isLoading}
             >
-              <Mic size={18} />
-            </motion.button>
+              {isRecording ? <Square size={20} /> : <Mic size={20} />}
+            </button>
 
             {/* Send Button */}
-            <motion.button
-              className={`send-btn ${
-                inputValue.trim() && !isLoading ? 'active' : 'disabled'
-              }`}
-              onClick={onSendMessage}
-              disabled={!inputValue.trim() || isLoading}
-              whileHover={inputValue.trim() && !isLoading ? { scale: 1.05 } : {}}
-              whileTap={inputValue.trim() && !isLoading ? { scale: 0.95 } : {}}
-              title="Send message"
+            <button
+              className={`ml-2 p-2 rounded-lg ${(inputValue.trim() || attachedFiles.length > 0) && !isLoading 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'} transition-colors`}
+              onClick={handleSend}
+              disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
             >
               {isLoading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                >
-                  <div className="loading-spinner" />
-                </motion.div>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Send size={18} />
+                <Send size={20} />
               )}
-            </motion.button>
+            </button>
           </div>
         </div>
 
         {/* Input Footer */}
-        <motion.div 
-          className="input-footer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="footer-left">
-            <span className="ai-indicator">AI-powered responses</span>
-            <div className="status-indicator">
-              <motion.div
-                className="status-dot"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-              <span>Online</span>
+        <div className="px-3 py-2 border-t border-gray-100 text-xs text-gray-500 flex justify-between">
+          <div>
+            Press Enter to send, Shift+Enter for new line
+          </div>
+          {inputValue.length > 0 && (
+            <div>
+              {inputValue.length} characters
             </div>
-          </div>
-          
-          <div className="footer-right">
-            <kbd className="key-hint">Enter</kbd>
-            <span>to send</span>
-          </div>
-        </motion.div>
+          )}
+        </div>
+      </div>
 
-        {/* Typing Indicator */}
-        {isLoading && (
-          <motion.div
-            className="typing-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="typing-content">
-              <div className="typing-dots">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="typing-dot"
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.5, 1, 0.5]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      delay: i * 0.2
-                    }}
-                  />
-                ))}
-              </div>
-              <span className="typing-text">Processing...</span>
-            </div>
-          </motion.div>
+      {/* Media Upload Modal */}
+      <AnimatePresence>
+        {showMediaUpload && (
+          <MediaUpload
+            onFileUpload={handleFileUpload}
+            onClose={() => setShowMediaUpload(false)}
+            maxFiles={5}
+          />
         )}
-      </motion.div>
-
-      {/* Input Hints */}
-      <motion.div 
-        className="input-hints"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <p>
-          BinaryBrained can make mistakes. Consider checking important information.
-        </p>
-      </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
