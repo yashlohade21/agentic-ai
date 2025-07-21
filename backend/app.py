@@ -48,19 +48,22 @@ def create_app():
 
     # Enhanced CORS configuration
     CORS(app, 
-         supports_credentials=True, 
-         origins=[
-             'http://localhost:3000', 
-             'http://127.0.0.1:3000',
-             'http://localhost:5173',
-             'http://127.0.0.1:5173',
-             'https://ai-agent-with-frontend.onrender.com',
-             'https://ai-agent-zeta-bice.vercel.app',
-         ],
-         allow_headers=['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-         expose_headers=['Set-Cookie'],
-         send_wildcard=False
+        resources={
+            r"/api/*": {
+                "origins": [
+                    'http://localhost:3000',
+                    'http://127.0.0.1:3000',
+                    'http://localhost:5173',
+                    'http://127.0.0.1:5173',
+                    'https://ai-agent-with-frontend.onrender.com',
+                    'https://ai-agent-zeta-bice.vercel.app',
+                ],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
+                "supports_credentials": True,
+                "expose_headers": ["Set-Cookie"]
+            }
+        }
     )
     
     # Register blueprints
