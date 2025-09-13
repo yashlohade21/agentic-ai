@@ -1,10 +1,7 @@
 import axios from 'axios';
 
-// Use local development server by default, fallback to production
-const API_BASE_URL = import.meta.env.VITE_API_URL 
-  || (process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:5000' 
-      : 'https://ai-agent-with-frontend.onrender.com');
+// Always use local backend for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       
 // Create optimized axios instance with dynamic timeout and retry logic
 const api = axios.create({
