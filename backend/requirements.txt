@@ -86,6 +86,7 @@ wikipedia
 yarl
 zstandard
 firebase-admin
+gunicorn
 
 # Media processing
 Pillow

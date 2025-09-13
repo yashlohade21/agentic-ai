@@ -1,4 +1,4 @@
-from flask import Flask, session
+from flask import Flask, session, jsonify, request
 from flask_cors import CORS
 from routes.auth import auth_bp
 from routes.chat import chat_bp
@@ -52,25 +52,52 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
-    # Enhanced CORS configuration
-    CORS(app, 
+    # Enhanced CORS configuration with wildcard for Vercel deployments
+    allowed_origins = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'https://ai-agent-with-frontend.onrender.com',
+        'https://ai-agent-zeta-bice.vercel.app',
+        'https://*.vercel.app'  # Allow all Vercel preview deployments
+    ]
+
+    CORS(app,
         resources={
             r"/api/*": {
-                "origins": [
-                    'http://localhost:3000',
-                    'http://127.0.0.1:3000',
-                    'http://localhost:5173',
-                    'http://127.0.0.1:5173',
-                    'https://ai-agent-with-frontend.onrender.com',
-                    'https://ai-agent-zeta-bice.vercel.app',
-                ],
-                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                "allow_headers": ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
+                "origins": allowed_origins,
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+                "allow_headers": ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept", "Origin"],
                 "supports_credentials": True,
-                "expose_headers": ["Set-Cookie"]
+                "expose_headers": ["Set-Cookie", "Content-Range", "X-Content-Range"],
+                "max_age": 3600
             }
-        }
+        },
+        send_wildcard=False,
+        always_send=True
     )
+
+    # Additional OPTIONS handler for preflight requests
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = jsonify({'status': 'ok'})
+            response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With, Accept, Origin')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Max-Age', '3600')
+            return response, 200
+
+    # After request handler to ensure CORS headers are always present
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin in allowed_origins or (origin and origin.endswith('.vercel.app')):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
