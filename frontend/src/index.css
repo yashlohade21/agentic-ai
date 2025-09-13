@@ -1871,29 +1871,120 @@ body {
    CODE BLOCK FORMATTING FIX
    ============================================ */
 
-/* Ensure proper code formatting and indentation */
+/* Code block container styling */
+.code-block-wrapper {
+  margin: 20px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Light mode code block styles */
+.code-block-wrapper.light {
+  background: #f6f8fa;
+  border: 1px solid #d1d5db;
+}
+
+/* Dark mode code block styles */
+.code-block-wrapper.dark {
+  background: #1e1e1e;
+  border: 1px solid #2d2d30;
+}
+
+/* Language label styling */
+.code-language-label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 2;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.light .code-language-label {
+  background: rgba(0,0,0,0.06);
+  color: #6e6e6e;
+}
+
+.dark .code-language-label {
+  background: rgba(255,255,255,0.1);
+  color: #858585;
+}
+
+/* Copy button styling */
+.code-copy-button {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.light .code-copy-button {
+  background: rgba(0,0,0,0.06);
+  color: #424242;
+}
+
+.light .code-copy-button:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+.dark .code-copy-button {
+  background: rgba(255,255,255,0.1);
+  color: #cccccc;
+}
+
+.dark .code-copy-button:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* Code content area */
+.code-content-area {
+  padding: 48px 20px 20px 20px;
+  overflow: auto;
+  max-height: 600px;
+}
+
+/* Syntax highlighter overrides for proper formatting */
 .message-content pre {
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
   border: none !important;
-  font-family: "Fira Code", "Cascadia Code", Menlo, Monaco, "Courier New", monospace !important;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
   font-size: 14px !important;
-  line-height: 1.5 !important;
+  line-height: 1.6 !important;
   white-space: pre !important;
   word-spacing: normal !important;
   word-break: normal !important;
   word-wrap: normal !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
   tab-size: 4 !important;
   -moz-tab-size: 4 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .message-content pre code {
   display: block !important;
   padding: 0 !important;
   margin: 0 !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
   white-space: pre !important;
   word-spacing: normal !important;
   word-break: normal !important;
@@ -1909,16 +2000,16 @@ body {
   -moz-tab-size: 4 !important;
 }
 
-/* Fix for syntax highlighter */
+/* Fix for syntax highlighter specific styles */
 .message-content pre[class*="language-"] {
   margin: 0 !important;
-  overflow: auto !important;
+  overflow-x: auto !important;
   background: transparent !important;
   white-space: pre !important;
   word-spacing: normal !important;
   word-break: normal !important;
   word-wrap: normal !important;
-  line-height: 1.5 !important;
+  line-height: 1.6 !important;
   tab-size: 4 !important;
   -moz-tab-size: 4 !important;
   hyphens: none !important;
@@ -1929,15 +2020,180 @@ body {
   word-spacing: normal !important;
   word-break: normal !important;
   word-wrap: normal !important;
-  line-height: 1.5 !important;
+  line-height: 1.6 !important;
   tab-size: 4 !important;
   -moz-tab-size: 4 !important;
   hyphens: none !important;
 }
 
-/* Preserve spaces and indentation */
+/* Token-specific styling for proper indentation */
 .message-content .token {
   white-space: pre !important;
+  display: inline !important;
+}
+
+/* Ensure proper formatting for all token types */
+.message-content .token.comment,
+.message-content .token.prolog,
+.message-content .token.doctype,
+.message-content .token.cdata {
+  color: #6a9955;
+}
+
+.message-content .token.punctuation {
+  color: #d4d4d4;
+}
+
+.message-content .token.property,
+.message-content .token.tag,
+.message-content .token.boolean,
+.message-content .token.number,
+.message-content .token.constant,
+.message-content .token.symbol,
+.message-content .token.deleted {
+  color: #b5cea8;
+}
+
+.message-content .token.selector,
+.message-content .token.attr-name,
+.message-content .token.string,
+.message-content .token.char,
+.message-content .token.builtin,
+.message-content .token.inserted {
+  color: #ce9178;
+}
+
+.message-content .token.operator,
+.message-content .token.entity,
+.message-content .token.url,
+.message-content .language-css .token.string,
+.message-content .style .token.string {
+  color: #d4d4d4;
+}
+
+.message-content .token.atrule,
+.message-content .token.attr-value,
+.message-content .token.keyword {
+  color: #569cd6;
+}
+
+.message-content .token.function,
+.message-content .token.class-name {
+  color: #dcdcaa;
+}
+
+.message-content .token.regex,
+.message-content .token.important,
+.message-content .token.variable {
+  color: #d16969;
+}
+
+/* Light theme token colors */
+.theme-light .message-content .token.comment,
+.theme-light .message-content .token.prolog,
+.theme-light .message-content .token.doctype,
+.theme-light .message-content .token.cdata {
+  color: #008000;
+}
+
+.theme-light .message-content .token.punctuation {
+  color: #393a34;
+}
+
+.theme-light .message-content .token.property,
+.theme-light .message-content .token.tag,
+.theme-light .message-content .token.boolean,
+.theme-light .message-content .token.number,
+.theme-light .message-content .token.constant,
+.theme-light .message-content .token.symbol,
+.theme-light .message-content .token.deleted {
+  color: #098658;
+}
+
+.theme-light .message-content .token.selector,
+.theme-light .message-content .token.attr-name,
+.theme-light .message-content .token.string,
+.theme-light .message-content .token.char,
+.theme-light .message-content .token.builtin,
+.theme-light .message-content .token.inserted {
+  color: #a31515;
+}
+
+.theme-light .message-content .token.operator,
+.theme-light .message-content .token.entity,
+.theme-light .message-content .token.url,
+.theme-light .message-content .language-css .token.string,
+.theme-light .message-content .style .token.string {
+  color: #393a34;
+}
+
+.theme-light .message-content .token.atrule,
+.theme-light .message-content .token.attr-value,
+.theme-light .message-content .token.keyword {
+  color: #0000ff;
+}
+
+.theme-light .message-content .token.function,
+.theme-light .message-content .token.class-name {
+  color: #795e26;
+}
+
+.theme-light .message-content .token.regex,
+.theme-light .message-content .token.important,
+.theme-light .message-content .token.variable {
+  color: #af00db;
+}
+
+/* Inline code styling */
+.message-content code:not([class*="language-"]) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  border: 1px solid var(--border);
+}
+
+/* Code block scrollbar styling */
+.code-content-area::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.code-content-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-content-area::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 5px;
+}
+
+.code-content-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
+
+/* Mobile responsive code blocks */
+@media (max-width: 768px) {
+  .code-content-area {
+    padding: 40px 12px 12px 12px;
+    font-size: 12px;
+  }
+
+  .message-content pre {
+    font-size: 12px !important;
+  }
+
+  .code-language-label {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .code-copy-button {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
 }
 
 /* ============================================

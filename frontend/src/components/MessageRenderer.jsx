@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { User, Bot, Copy, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'react-hot-toast';
 
@@ -131,27 +131,63 @@ const MessageRenderer = ({ message }) => {
                   // Auto-detect language if not specified
                   let language = match ? match[1] : 'plaintext';
 
-                  // Try to detect JSON
-                  if (!match && (codeString.trim().startsWith('{') || codeString.trim().startsWith('['))) {
-                    try {
-                      JSON.parse(codeString);
-                      language = 'json';
-                    } catch {
-                      language = 'javascript';
+                  // Language detection patterns
+                  if (!match) {
+                    // Try to detect JSON
+                    if (codeString.trim().startsWith('{') || codeString.trim().startsWith('[')) {
+                      try {
+                        JSON.parse(codeString);
+                        language = 'json';
+                      } catch {
+                        // Check for JavaScript
+                        if (codeString.includes('function') || codeString.includes('const') ||
+                            codeString.includes('let') || codeString.includes('var') ||
+                            codeString.includes('=>')) {
+                          language = 'javascript';
+                        }
+                      }
+                    }
+                    // Detect Java
+                    else if (codeString.includes('public class') || codeString.includes('public static') ||
+                             codeString.includes('System.out') || codeString.includes('import java') ||
+                             codeString.includes('package ')) {
+                      language = 'java';
+                    }
+                    // Detect Python
+                    else if (codeString.includes('def ') || codeString.includes('import ') ||
+                             codeString.includes('from ') || codeString.includes('print(')) {
+                      language = 'python';
+                    }
+                    // Detect HTML
+                    else if (codeString.includes('<!DOCTYPE') || codeString.includes('<html') ||
+                             codeString.includes('<div') || codeString.includes('<body')) {
+                      language = 'html';
+                    }
+                    // Detect CSS
+                    else if (codeString.includes('{') && (codeString.includes('color:') ||
+                             codeString.includes('background:') || codeString.includes('margin:') ||
+                             codeString.includes('padding:'))) {
+                      language = 'css';
+                    }
+                    // Detect SQL
+                    else if (codeString.toUpperCase().includes('SELECT') ||
+                             codeString.toUpperCase().includes('INSERT') ||
+                             codeString.toUpperCase().includes('UPDATE')) {
+                      language = 'sql';
                     }
                   }
 
                   return (
-                    <div style={{
+                    <div className={`code-block-wrapper ${isDark ? 'dark' : 'light'}`} style={{
                       margin: '20px 0',
                       borderRadius: '12px',
                       overflow: 'hidden',
-                      background: isDark ? '#1e1e1e' : '#ffffff',
-                      border: `1px solid ${isDark ? '#2d2d30' : '#d4d4d4'}`,
+                      background: isDark ? '#1e1e1e' : '#f6f8fa',
+                      border: `1px solid ${isDark ? '#2d2d30' : '#d1d5db'}`,
                       position: 'relative'
                     }}>
                       {/* Language Label */}
-                      <div style={{
+                      <div className="code-language-label" style={{
                         position: 'absolute',
                         top: '12px',
                         left: '16px',
@@ -171,6 +207,7 @@ const MessageRenderer = ({ message }) => {
 
                       {/* Copy Button */}
                       <button
+                        className="code-copy-button"
                         onClick={() => {
                           navigator.clipboard.writeText(codeString);
                           toast.success('Copied!', { duration: 1500 });
@@ -206,23 +243,33 @@ const MessageRenderer = ({ message }) => {
                         <span>Copy code</span>
                       </button>
 
-                      <div style={{
+                      <div className="code-content-area" style={{
                         padding: '48px 20px 20px 20px',
                         overflow: 'auto',
                         maxHeight: '600px'
                       }}>
                         <SyntaxHighlighter
-                          style={isDark ? atomDark : prism}
+                          style={isDark ? vscDarkPlus : oneLight}
                           language={language}
                           PreTag="pre"
                           showLineNumbers={false}
                           customStyle={{
                             margin: 0,
-                            padding: 0,
-                            background: 'transparent',
+                            padding: '16px',
+                            background: isDark ? '#1e1e1e' : '#f6f8fa',
                             fontSize: '14px',
                             lineHeight: '1.6',
-                            fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+                            fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                            borderRadius: '0',
+                            border: 'none',
+                            overflow: 'visible'
+                          }}
+                          codeTagProps={{
+                            style: {
+                              fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                              fontSize: '14px',
+                              lineHeight: '1.6'
+                            }
                           }}
                           {...props}
                         >
@@ -235,13 +282,15 @@ const MessageRenderer = ({ message }) => {
                 return (
                   <code
                     style={{
-                      background: isDark ? '#444654' : '#f1f5f9',
-                      color: isDark ? '#e5e5e5' : '#334155',
+                      background: isDark ? 'rgba(110, 118, 129, 0.4)' : 'rgba(175, 184, 193, 0.2)',
+                      color: isDark ? '#e5e5e5' : '#1f2937',
                       padding: '2px 6px',
                       borderRadius: '4px',
-                      fontSize: '0.9em',
-                      fontFamily: 'JetBrains Mono, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                      border: `1px solid ${isDark ? '#565869' : '#e2e8f0'}`
+                      fontSize: '0.875em',
+                      fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Liberation Mono', 'Courier New', monospace",
+                      fontWeight: '500',
+                      border: `1px solid ${isDark ? 'rgba(110, 118, 129, 0.3)' : 'rgba(175, 184, 193, 0.3)'}`,
+                      whiteSpace: 'nowrap'
                     }}
                     {...props}
                   >
