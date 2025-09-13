@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, Image, File, X, Copy, RotateCcw, 
-  Loader2, CheckCircle, AlertCircle, Upload 
+import {
+  FileText, Image, File, X, Copy, RotateCcw,
+  Loader2, CheckCircle, AlertCircle, Upload, Check
 } from 'lucide-react';
 import deepLearningService from '../services/deepLearningService';
 

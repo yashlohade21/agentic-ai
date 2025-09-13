@@ -258,14 +258,35 @@ const ChatSidebar = ({
 
   const ChatItem = ({ chat }) => {
     const [showMenu, setShowMenu] = useState(false);
+    const [isTouched, setIsTouched] = useState(false);
     const isActive = currentChatId === chat.id;
+
+    // Handle touch devices - show menu on touch/active state
+    const handleTouchStart = (e) => {
+      e.stopPropagation();
+      setIsTouched(true);
+      setShowMenu(true);
+    };
+
+    const handleTouchEnd = () => {
+      // Keep menu visible for a moment on touch devices
+      setTimeout(() => {
+        setIsTouched(false);
+        if (!isActive) setShowMenu(false);
+      }, 100);
+    };
+
+    // Show menu on hover for desktop, always for active item, or when touched
+    const shouldShowMenu = !isCollapsed && (showMenu || isActive || isTouched);
 
     return (
       <div
-        className={`chat-item ${isActive ? 'active' : ''}`}
+        className={`chat-item ${isActive ? 'active' : ''} ${shouldShowMenu ? 'show-menu' : ''}`}
         onClick={() => onChatSelect(chat.id)}
         onMouseEnter={() => setShowMenu(true)}
-        onMouseLeave={() => setShowMenu(false)}
+        onMouseLeave={() => !isTouched && setShowMenu(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <MessageSquare size={16} className="chat-item-icon" />
         <div className="chat-item-content">
@@ -274,18 +295,24 @@ const ChatSidebar = ({
             <div className="chat-item-preview">{chat.preview}</div>
           )}
         </div>
-        {showMenu && !isCollapsed && (
+        {shouldShowMenu && (
           <div className="chat-item-menu">
             <button
               className="chat-menu-btn"
-              onClick={(e) => renameChat(chat.id, chat.title, e)}
+              onClick={(e) => {
+                e.stopPropagation();
+                renameChat(chat.id, chat.title, e);
+              }}
               title="Rename"
             >
               <Edit2 size={14} />
             </button>
             <button
               className="chat-menu-btn delete"
-              onClick={(e) => deleteChat(chat.id, e)}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteChat(chat.id, e);
+              }}
               title="Delete"
             >
               <Trash2 size={14} />

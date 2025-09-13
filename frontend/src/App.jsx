@@ -305,6 +305,12 @@ function App() {
     setMessages([]);
     setCurrentChatId(null);
     setInputValue('');
+
+    // Close sidebar on mobile after starting new chat
+    if (window.innerWidth <= 768) {
+      setShowSidebar(false);
+    }
+
     // Trigger sidebar refresh to show the new state
     setRefreshSidebar(prev => prev + 1);
     toast.success('New chat started', {
@@ -324,6 +330,12 @@ function App() {
           timestamp: new Date(msg.timestamp)
         })));
         setCurrentChatId(chatId);
+
+        // Close sidebar on mobile after selecting chat
+        if (window.innerWidth <= 768) {
+          setShowSidebar(false);
+        }
+
         toast.success('Chat loaded', {
           icon: '📂',
           duration: 1000,
@@ -491,8 +503,16 @@ function App() {
       />
       
       <div className="app-layout">
+        {/* Mobile Overlay */}
+        {showSidebar && (
+          <div
+            className="mobile-sidebar-overlay"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
+
         {/* Chat Sidebar with History */}
-        <ChatSidebar 
+        <ChatSidebar
           currentChatId={currentChatId}
           onChatSelect={handleChatSelect}
           onNewChat={handleNewChat}
@@ -535,15 +555,22 @@ function App() {
         <main className="main-content">
           <div className="chat-header">
             <div className="chat-title">
+              <button
+                className="mobile-menu-btn action-btn"
+                onClick={() => setShowSidebar(true)}
+                title="Open sidebar"
+              >
+                <Menu size={20} />
+              </button>
               <Bot size={24} className="chat-icon" />
               <div>
                 <h1>AI Assistant</h1>
                 <span className="status">Online • {user?.username}</span>
               </div>
             </div>
-            
+
             <div className="chat-actions">
-              <button 
+              <button
                 className="action-btn"
                 onClick={handleLogout}
                 title="Sign out"
