@@ -1,19 +1,21 @@
 /* Chat Sidebar Styles */
 
 .claude-sidebar {
-  width: 260px;
+  width: clamp(240px, 20vw, 300px);
   height: 100vh;
+  height: 100dvh;
   background: var(--sidebar-bg, #f7f7f8);
   border-right: 1px solid var(--border-color, #e5e5e5);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, transform 0.3s ease;
   position: relative;
   z-index: 10;
 }
 
 .claude-sidebar.collapsed {
-  width: 60px;
+  width: clamp(50px, 8vw, 70px);
+  overflow: hidden;
 }
 
 /* Dark mode styles */
@@ -28,26 +30,31 @@
 
 /* Sidebar Header */
 .sidebar-header {
-  padding: 12px;
+  padding: clamp(0.5rem, 2vw, 0.75rem);
   border-bottom: 1px solid var(--border-color, #e5e5e5);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: clamp(0.5rem, 2vw, 0.75rem);
+  min-height: clamp(3rem, 8vh, 4rem);
+  flex-shrink: 0;
 }
 
 .sidebar-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: clamp(2rem, 5vw, 2.5rem);
+  height: clamp(2rem, 5vw, 2.5rem);
   background: transparent;
   border: 1px solid var(--border-color, #e5e5e5);
-  border-radius: 8px;
+  border-radius: clamp(0.375rem, 1vw, 0.5rem);
   color: var(--text-primary, #202123);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  min-width: 32px;
+  min-height: 32px;
+  touch-action: manipulation;
 }
 
 .sidebar-toggle-btn:hover {
@@ -88,16 +95,18 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: clamp(0.25rem, 1vw, 0.5rem);
+  padding: clamp(0.5rem, 2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
   background: transparent;
   border: 1px solid var(--border-color, #e5e5e5);
-  border-radius: 8px;
+  border-radius: clamp(0.375rem, 1vw, 0.5rem);
   color: var(--text-primary, #202123);
-  font-size: 14px;
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: clamp(2rem, 5vw, 2.5rem);
+  touch-action: manipulation;
 }
 
 .new-chat-btn:hover {
@@ -116,7 +125,7 @@
 
 /* Sidebar Search */
 .sidebar-search {
-  padding: 12px;
+  padding: clamp(0.5rem, 2vw, 0.75rem);
   border-bottom: 1px solid var(--border-color, #e5e5e5);
   position: relative;
 }
@@ -132,14 +141,15 @@
 
 .search-input {
   width: 100%;
-  padding: 8px 12px 8px 36px;
+  padding: clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem) clamp(0.375rem, 1.5vw, 0.5rem) clamp(2rem, 5vw, 2.25rem);
   background: var(--hover-bg, #ffffff);
   border: 1px solid var(--border-color, #e5e5e5);
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: clamp(0.25rem, 1vw, 0.375rem);
+  font-size: max(16px, clamp(0.75rem, 2vw, 0.875rem));
   color: var(--text-primary, #202123);
   outline: none;
   transition: all 0.2s ease;
+  min-height: clamp(2rem, 5vw, 2.5rem);
 }
 
 .search-input:focus {
@@ -155,27 +165,31 @@
 .sidebar-chats {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  overflow-x: hidden;
+  padding: clamp(0.375rem, 1.5vw, 0.5rem);
+  overscroll-behavior: contain;
 }
 
 /* Chat Groups */
 .chat-group {
-  margin-bottom: 16px;
+  margin-bottom: clamp(0.75rem, 3vw, 1rem);
 }
 
 .chat-group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: clamp(0.25rem, 1vw, 0.375rem) clamp(0.375rem, 1.5vw, 0.5rem);
   color: var(--text-secondary, #8e8ea0);
-  font-size: 12px;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
   user-select: none;
   transition: color 0.2s ease;
+  min-height: clamp(1.5rem, 4vw, 2rem);
+  touch-action: manipulation;
 }
 
 .chat-group-header:hover {
@@ -201,14 +215,16 @@
 .chat-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 2px;
-  border-radius: 8px;
+  gap: clamp(0.375rem, 1.5vw, 0.625rem);
+  padding: clamp(0.5rem, 2vw, 0.75rem);
+  margin-bottom: clamp(0.125rem, 0.5vw, 0.25rem);
+  border-radius: clamp(0.375rem, 1vw, 0.5rem);
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  min-height: clamp(2.25rem, 6vw, 2.75rem);
+  touch-action: manipulation;
 }
 
 .chat-item:hover {
@@ -239,20 +255,22 @@
 }
 
 .chat-item-title {
-  font-size: 14px;
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
   color: var(--text-primary, #202123);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .chat-item-preview {
-  font-size: 12px;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
   color: var(--text-secondary, #8e8ea0);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: clamp(0.125rem, 0.5vw, 0.25rem);
+  line-height: 1.2;
 }
 
 /* Chat Item Menu */
@@ -272,14 +290,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: clamp(1.5rem, 4vw, 1.75rem);
+  height: clamp(1.5rem, 4vw, 1.75rem);
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
   color: var(--text-secondary, #8e8ea0);
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 24px;
+  min-height: 24px;
+  touch-action: manipulation;
 }
 
 .chat-menu-btn:hover {
@@ -303,7 +324,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: clamp(1.5rem, 6vw, 2.5rem) clamp(1rem, 4vw, 1.25rem);
   color: var(--text-secondary, #8e8ea0);
   text-align: center;
 }
@@ -351,24 +372,27 @@
 }
 
 .empty-state p {
-  font-size: 14px;
-  margin: 0 0 16px 0;
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
+  margin: 0 0 clamp(0.75rem, 3vw, 1rem) 0;
+  line-height: 1.4;
 }
 
 .start-chat-btn {
-  padding: 8px 16px;
+  padding: clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.75rem, 3vw, 1rem);
   background: #667eea;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: clamp(0.25rem, 1vw, 0.375rem);
+  font-size: max(16px, clamp(0.75rem, 2vw, 0.875rem));
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: clamp(2rem, 5vw, 2.5rem);
+  touch-action: manipulation;
 }
 
 .start-chat-btn:hover {
-  background: #5a67d8;
+  background: #667eea;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
@@ -473,24 +497,308 @@
   background: var(--hover-bg, #2a2b32);
 }
 
-/* Responsive Design */
+/* ============================================
+   COMPREHENSIVE SIDEBAR RESPONSIVE DESIGN
+   ============================================ */
+
+/* Large Tablets */
+@media (max-width: 1024px) {
+  .claude-sidebar {
+    width: clamp(220px, 18vw, 280px);
+  }
+
+  .claude-sidebar.collapsed {
+    width: clamp(45px, 7vw, 65px);
+  }
+
+  .sidebar-header {
+    padding: clamp(0.375rem, 1.5vw, 0.625rem);
+    gap: clamp(0.375rem, 1.5vw, 0.625rem);
+  }
+
+  .chat-item {
+    padding: clamp(0.375rem, 1.5vw, 0.625rem);
+    gap: clamp(0.25rem, 1vw, 0.5rem);
+  }
+
+  .chat-group-header {
+    padding: clamp(0.25rem, 1vw, 0.375rem) clamp(0.375rem, 1.5vw, 0.5rem);
+    font-size: clamp(0.5625rem, 1.2vw, 0.6875rem);
+  }
+}
+
+/* Tablets */
 @media (max-width: 768px) {
   .claude-sidebar {
     position: fixed;
     left: 0;
     top: 0;
     z-index: 100;
+    width: clamp(260px, 70vw, 320px);
     transform: translateX(-100%);
     transition: transform 0.3s ease;
+    box-shadow: none;
   }
-  
+
   .claude-sidebar:not(.collapsed) {
     transform: translateX(0);
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   }
-  
+
   .sidebar-extras {
     display: none;
+  }
+
+  .sidebar-header {
+    padding: clamp(0.5rem, 2vw, 0.75rem);
+    min-height: clamp(3.5rem, 9vh, 4.5rem);
+  }
+
+  .sidebar-search {
+    padding: clamp(0.375rem, 1.5vw, 0.625rem);
+  }
+
+  .search-input {
+    min-height: clamp(2.25rem, 6vw, 2.75rem);
+    font-size: max(16px, clamp(0.875rem, 2.5vw, 1rem));
+  }
+
+  .chat-item {
+    min-height: clamp(2.5rem, 7vw, 3rem);
+    padding: clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .chat-item-title {
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+  }
+
+  .chat-item-preview {
+    font-size: clamp(0.75rem, 2vw, 0.875rem);
+  }
+
+  .new-chat-btn {
+    min-height: clamp(2.25rem, 6vw, 2.75rem);
+    font-size: max(16px, clamp(0.875rem, 2.5vw, 1rem));
+  }
+
+  .sidebar-toggle-btn {
+    width: clamp(2.25rem, 6vw, 2.75rem);
+    height: clamp(2.25rem, 6vw, 2.75rem);
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* Large Phones */
+@media (max-width: 640px) {
+  .claude-sidebar {
+    width: clamp(240px, 75vw, 300px);
+  }
+
+  .sidebar-header {
+    padding: clamp(0.375rem, 1.5vw, 0.5rem);
+    gap: clamp(0.375rem, 1.5vw, 0.5rem);
+  }
+
+  .sidebar-chats {
+    padding: clamp(0.25rem, 1vw, 0.375rem);
+  }
+
+  .chat-group {
+    margin-bottom: clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .chat-item {
+    padding: clamp(0.375rem, 1.5vw, 0.5rem);
+    gap: clamp(0.25rem, 1vw, 0.375rem);
+    min-height: clamp(2.25rem, 6vw, 2.75rem);
+  }
+
+  .chat-menu-btn {
+    width: clamp(1.375rem, 3.5vw, 1.625rem);
+    height: clamp(1.375rem, 3.5vw, 1.625rem);
+    min-width: 22px;
+    min-height: 22px;
+  }
+
+  .empty-state {
+    padding: clamp(1rem, 4vw, 1.5rem) clamp(0.75rem, 3vw, 1rem);
+  }
+
+  .empty-state p {
+    font-size: clamp(0.8125rem, 2.5vw, 0.9375rem);
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .claude-sidebar {
+    width: min(280px, 80vw);
+    max-width: 85vw;
+  }
+
+  .sidebar-header {
+    padding: clamp(0.375rem, 1.5vw, 0.5rem);
+    min-height: clamp(3rem, 8vw, 4rem);
+  }
+
+  .new-chat-btn {
+    padding: clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem);
+    min-height: clamp(2rem, 6vw, 2.5rem);
+    font-size: max(16px, clamp(0.8125rem, 2.5vw, 0.9375rem));
+  }
+
+  .sidebar-toggle-btn {
+    width: clamp(2rem, 6vw, 2.5rem);
+    height: clamp(2rem, 6vw, 2.5rem);
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .search-input {
+    padding: clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.625rem) clamp(0.375rem, 1.5vw, 0.5rem) clamp(1.75rem, 5vw, 2rem);
+    min-height: clamp(2rem, 6vw, 2.5rem);
+    font-size: max(16px, clamp(0.8125rem, 2.5vw, 0.9375rem));
+  }
+
+  .search-icon {
+    left: clamp(0.5rem, 2vw, 0.625rem);
+  }
+
+  .chat-item {
+    padding: clamp(0.375rem, 1.5vw, 0.5rem);
+    min-height: clamp(2rem, 6vw, 2.5rem);
+  }
+
+  .chat-item-title {
+    font-size: max(16px, clamp(0.8125rem, 2.5vw, 0.9375rem));
+  }
+
+  .chat-item-preview {
+    font-size: clamp(0.6875rem, 2vw, 0.8125rem);
+  }
+
+  .chat-group-header {
+    font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+    padding: clamp(0.25rem, 1vw, 0.375rem);
+  }
+
+  .start-chat-btn {
+    min-height: clamp(2rem, 6vw, 2.5rem);
+    font-size: max(16px, clamp(0.8125rem, 2.5vw, 0.9375rem));
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .claude-sidebar {
+    width: min(260px, 85vw);
+  }
+
+  .sidebar-header {
+    padding: clamp(0.25rem, 1vw, 0.375rem);
+    gap: clamp(0.25rem, 1vw, 0.375rem);
+    min-height: clamp(2.75rem, 8vw, 3.5rem);
+  }
+
+  .new-chat-btn {
+    padding: clamp(0.25rem, 1vw, 0.375rem) clamp(0.375rem, 1.5vw, 0.5rem);
+    min-height: clamp(1.75rem, 6vw, 2.25rem);
+    font-size: max(16px, clamp(0.75rem, 2.5vw, 0.875rem));
+  }
+
+  .sidebar-toggle-btn {
+    width: clamp(1.75rem, 6vw, 2.25rem);
+    height: clamp(1.75rem, 6vw, 2.25rem);
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  .search-input {
+    min-height: clamp(1.75rem, 6vw, 2.25rem);
+    padding: clamp(0.25rem, 1vw, 0.375rem) clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.25rem, 1vw, 0.375rem) clamp(1.5rem, 4vw, 1.75rem);
+  }
+
+  .chat-item {
+    padding: clamp(0.25rem, 1vw, 0.375rem);
+    min-height: clamp(1.75rem, 6vw, 2.25rem);
+  }
+
+  .chat-item-title {
+    font-size: max(16px, clamp(0.75rem, 2.5vw, 0.875rem));
+  }
+
+  .chat-item-preview {
+    font-size: clamp(0.625rem, 2vw, 0.75rem);
+  }
+
+  .empty-state {
+    padding: clamp(0.75rem, 3vw, 1rem) clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .empty-state p {
+    font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+  }
+}
+
+/* Landscape Mode */
+@media (max-height: 600px) and (orientation: landscape) {
+  .claude-sidebar {
+    width: clamp(200px, 25vw, 260px);
+  }
+
+  .sidebar-header {
+    min-height: clamp(2.5rem, 8vh, 3rem);
+    padding: clamp(0.375rem, 2vh, 0.5rem) clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .sidebar-chats {
+    padding: clamp(0.25rem, 1vh, 0.375rem) clamp(0.375rem, 1.5vw, 0.5rem);
+  }
+
+  .chat-item {
+    min-height: clamp(1.75rem, 6vh, 2.25rem);
+    padding: clamp(0.25rem, 1vh, 0.375rem) clamp(0.375rem, 1.5vw, 0.5rem);
+  }
+
+  .new-chat-btn {
+    min-height: clamp(1.75rem, 6vh, 2.25rem);
+  }
+
+  .search-input {
+    min-height: clamp(1.75rem, 6vh, 2.25rem);
+  }
+}
+
+/* Touch Device Enhancements */
+@media (pointer: coarse) {
+  .sidebar-toggle-btn,
+  .new-chat-btn,
+  .chat-item,
+  .chat-menu-btn,
+  .start-chat-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .search-input {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .chat-group-header {
+    min-height: 36px;
+  }
+
+  /* Increase touch target sizes */
+  .sidebar-toggle-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .chat-menu-btn {
+    min-width: 32px;
+    min-height: 32px;
   }
 }
 
