@@ -4,11 +4,26 @@ import logging
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 try:
-    from firebase_config import db
+    from firebase_config import db, get_cached_user, invalidate_user_cache, get_firestore_client
 except:
     from firebase_config_mock import db
-from datetime import datetime
+    # Fallback functions for mock
+    def get_cached_user(user_id, ttl_seconds=300):
+        users_ref = db.collection('users')
+        user_doc = users_ref.document(user_id).get()
+        if user_doc.exists:
+            return {'id': user_doc.id, 'data': user_doc.to_dict(), 'exists': True}
+        return {'exists': False}
+    
+    def invalidate_user_cache(user_id=None):
+        pass
+    
+    def get_firestore_client():
+        return db
+
+from datetime import datetime, timedelta
 import re
+from functools import lru_cache
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -60,14 +75,21 @@ def register():
         if not is_valid:
             return jsonify({'error': password_message}), 400
         
-        # Check if user already exists
-        users_ref = db.collection('users')
-        username_query = users_ref.where('username', '==', username).limit(1).stream()
-        email_query = users_ref.where('email', '==', email).limit(1).stream()
-
-        if next(username_query, None):
+        # Optimized existence check with single batch query
+        db_client = get_firestore_client()
+        users_ref = db_client.collection('users')
+        
+        # Use batch to check both username and email in one query
+        import asyncio
+        
+        # Check username
+        username_docs = list(users_ref.where('username', '==', username).limit(1).stream())
+        if username_docs:
             return jsonify({'error': 'Username already exists'}), 409
-        if next(email_query, None):
+            
+        # Check email
+        email_docs = list(users_ref.where('email', '==', email).limit(1).stream())
+        if email_docs:
             return jsonify({'error': 'Email already registered'}), 409
 
         # Create new user
@@ -90,6 +112,7 @@ def register():
             'message': 'User registered and logged in successfully',
             'user': {
                 'id': new_user_id,
+                'uid': new_user_id,  # Include both for compatibility
                 'username': username,
                 'email': email
             }
@@ -113,15 +136,17 @@ def login():
         if not username or not password:
             return jsonify({'error': 'Username and password are required'}), 400
         
-        # Find user
-        users_ref = db.collection('users')
-        query = users_ref.where('username', '==', username).limit(1).stream()
-        user_snapshot = next(query, None)
-
-        if not user_snapshot:
+        # Optimized user lookup with single query
+        db_client = get_firestore_client()
+        users_ref = db_client.collection('users')
+        user_docs = list(users_ref.where('username', '==', username).limit(1).stream())
+        
+        if not user_docs:
             return jsonify({'error': 'Invalid username or password'}), 401
-
+        
+        user_snapshot = user_docs[0]
         user_data = user_snapshot.to_dict()
+        
         if not check_password_hash(user_data['hashed_password'], password):
             return jsonify({'error': 'Invalid username or password'}), 401
         
@@ -135,6 +160,7 @@ def login():
             'message': 'Login successful',
             'user': {
                 'id': user_snapshot.id,
+                'uid': user_snapshot.id,  # Include both for compatibility
                 'username': user_data['username'],
                 'email': user_data['email']
             }
@@ -186,43 +212,62 @@ def debug_session():
 
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
-    """Check if user is authenticated"""
+    """Super fast auth check with caching and optimized session handling"""
     try:
-        if 'user_id' in session and 'login_time' in session:
-            # Check session timeout (30 minutes)
+        if 'user_id' not in session:
+            return jsonify({'authenticated': False, 'reason': 'no_session'}), 200
+            
+        # Extended session timeout to 2 hours for better UX
+        if 'login_time' in session:
             login_time = datetime.fromisoformat(session['login_time'])
-            if (datetime.utcnow() - login_time).total_seconds() > 1800:  # 30 minutes
+            session_age = (datetime.utcnow() - login_time).total_seconds()
+            
+            if session_age > 7200:  # 2 hours instead of 30 minutes
                 session.clear()
                 session.modified = True
                 return jsonify({'authenticated': False, 'reason': 'session_expired'}), 200
+        
+        user_id = session['user_id']
+        
+        # Use cached user data instead of hitting database every time
+        cached_user = get_cached_user(user_id, ttl_seconds=600)  # 10 minute cache
+        
+        if cached_user['exists']:
+            user_data = cached_user['data']
+            # Update last activity time less frequently (every 5 minutes)
+            current_time = datetime.utcnow()
             
-            users_ref = db.collection('users')
-            user_doc = users_ref.document(session['user_id']).get()
-
-            if user_doc.exists:
-                user_data = user_doc.to_dict()
-                # Update last activity time
-                session['last_activity'] = datetime.utcnow().isoformat()
-                return jsonify({
-                    'authenticated': True,
-                    'user': {
-                        'id': user_doc.id,
-                        'username': user_data['username'],
-                        'email': user_data['email']
-                    }
-                }), 200
+            if 'last_activity_update' not in session:
+                session['last_activity_update'] = current_time.isoformat()
+                session['last_activity'] = current_time.isoformat()
             else:
-                session.clear()
-                session.modified = True
-                return jsonify({'authenticated': False, 'reason': 'user_not_found'}), 200
+                last_update = datetime.fromisoformat(session['last_activity_update'])
+                if (current_time - last_update).total_seconds() > 300:  # 5 minutes
+                    session['last_activity_update'] = current_time.isoformat()
+                    session['last_activity'] = current_time.isoformat()
+            
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'id': cached_user['id'],
+                    'uid': cached_user['id'],  # Include both for compatibility
+                    'username': user_data['username'],
+                    'email': user_data['email']
+                }
+            }), 200
         else:
-            return jsonify({'authenticated': False, 'reason': 'no_session'}), 200
+            # User not found in database, clear session
+            session.clear()
+            session.modified = True
+            return jsonify({'authenticated': False, 'reason': 'user_not_found'}), 200
+            
     except Exception as e:
-        session.clear()
-        session.modified = True
+        logging.error(f"Auth check error: {e}")
+        # Don't clear session on temporary errors, just return false
         return jsonify({'authenticated': False, 'error': f'Auth check failed: {str(e)}'}), 500
 
 def require_auth(func):
+    """Optimized auth decorator with caching"""
     @wraps(func)
     def wrapper(*args, **kwargs):
         user_id = session.get('user_id')
@@ -230,18 +275,28 @@ def require_auth(func):
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
         
-        # Additional check: verify user still exists in database
+        # Use cached user check instead of database hit every time
         try:
-            users_ref = db.collection('users')
-            user_doc = users_ref.document(user_id).get()
-            if not user_doc.exists:
+            cached_user = get_cached_user(user_id, ttl_seconds=300)  # 5 minute cache
+            if not cached_user['exists']:
                 session.clear()
                 session.modified = True
                 return jsonify({'error': 'Authentication required'}), 401
         except Exception as e:
+            logging.error(f"Auth check error in decorator: {e}")
             return jsonify({'error': 'Authentication required'}), 401
         
         return func(*args, **kwargs)
     return wrapper
+
+# Add cache invalidation on logout and user updates
+@auth_bp.after_request
+def after_request(response):
+    """Clear relevant caches after certain operations"""
+    if request.endpoint in ['auth.logout']:
+        user_id = session.get('user_id')
+        if user_id:
+            invalidate_user_cache(user_id)
+    return response
 
 

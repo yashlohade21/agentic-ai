@@ -2,7 +2,9 @@ from typing import Dict, List, Any
 from .base_agent import BaseAgent, AgentMessage, AgentResponse
 from .enhanced_coder import EnhancedCoderAgent
 from core.state_manager import StateManager
+from .personality_engine import personality
 import asyncio
+import re
 from datetime import datetime
 import logging
 
@@ -79,47 +81,207 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
             user_request = message.content.get('request')
             self.logger.info(f"Processing enhanced request: {user_request}")
             
-            # Step 1: Analyze the request type and complexity
-            request_analysis = await self._analyze_request(user_request)
+            # OPTIMIZATION: Fast path for simple conversational messages
+            if self._is_simple_message(user_request):
+                self.logger.info("Using fast path for simple message")
+                return await self._handle_simple_message(user_request)
             
-            # Step 2: Gather comprehensive context
-            context = await self._gather_comprehensive_context(user_request, request_analysis)
-            
-            # Step 3: Create enhanced execution plan
-            plan = await self._create_enhanced_plan(user_request, context, request_analysis)
-            
-            # Step 4: Execute with rich context
-            results = await self._execute_with_context(plan, context)
-            
-            # Step 5: Quality review and enhancement
-            enhanced_results = await self._enhance_and_review_results(results, user_request, context)
-            
-            # Step 6: Generate comprehensive final response
-            final_response = await self._generate_comprehensive_response(
-                enhanced_results, user_request, context
-            )
-            
-            # Update conversation context
-            self._update_conversation_context(user_request, final_response, context)
-            
-            return AgentResponse(
-                success=True,
-                data={
-                    "response": final_response,
-                    "context": context,
-                    "plan": plan,
-                    "detailed_results": enhanced_results
-                },
-                metadata={
-                    "request_type": request_analysis.get('type'),
-                    "complexity": request_analysis.get('complexity'),
-                    "agents_used": list(results.keys())
-                }
-            )
+            # For complex requests, use full processing
+            return await self._full_process(user_request)
             
         except Exception as e:
             self.logger.error(f"Enhanced orchestration failed: {str(e)}")
             return AgentResponse(success=False, error=str(e))
+    
+    def _is_simple_message(self, request: str) -> bool:
+        """Check if this is a simple conversational message that doesn't need full processing"""
+        if not request:
+            return False
+            
+        request_lower = request.lower().strip()
+        
+        # Ultra-comprehensive regex patterns for casual conversation
+        simple_regex_patterns = [
+            # Greetings & farewells
+            r'^(hi+|hey+|hello+|yo+|sup+|wassup|what\'?s? up|hiya|howdy)[\s!?.,]*$',
+            r'^(good )?(morning|afternoon|evening|night)[\s!?.,]*$',
+            r'^(bye+|goodbye|see (you|ya)|later|gotta go|gtg|cya|ttyl)[\s!?.,]*$',
+            
+            # How are you & responses
+            r'^how(\'?s| is| are) (it going|you|u|things?|everything|life)[\s!?.,]*$',
+            r'^(you|u) (good|okay|alright|doing (okay|alright|well))[\s!?.,]*$',
+            r'^(i\'?m |im )?(good|fine|okay|great|tired|bored)[\s!?.,]*$',
+            r'^(all|everything\'?s?) (good|well|fine)[\s!?.,]*$',
+            
+            # Thanks & acknowledgments  
+            r'^(thanks?|thank (you|u)|thx|ty|tysm|cheers)[\s!?.,]*$',
+            r'^(you\'?re? (the best|awesome|amazing)|appreciate it)[\s!?.,]*$',
+            
+            # Simple responses
+            r'^(ok+|okay+|alright|cool+|nice+|great|good|fine|sure)[\s!?.,]*$',
+            r'^(yeah+|yep+|yup+|yes+|ya+|uh huh|mhm)[\s!?.,]*$',
+            r'^(no+|nope+|nah+|not really|don\'?t think so)[\s!?.,]*$',
+            r'^(maybe|perhaps|possibly|probably|i guess)[\s!?.,]*$',
+            
+            # Reactions
+            r'^(lol+|lmao+|rofl+|haha+|hehe+|omg+|wtf+|damn+|bruh+)[\s!?.,]*$',
+            r'^(wow+|woah+|whoa+|oh+|ah+|hmm+|uh+|um+)[\s!?.,]*$',
+            r'^(really|seriously|for real|no way|are you serious)[\s!?.,]*$',
+            r'^(interesting|weird|strange|crazy|wild|cool|awesome)[\s!?.,]*$',
+            
+            # Questions about AI
+            r'^(who|what|where) (are|r) (you|u)[\s!?.,]*$',
+            r'^are (you|u) (real|human|ai|there|listening)[\s!?.,]*$',
+            r'^can (you|u) (hear|understand|help) me[\s!?.,]*$',
+            
+            # Emotional expressions
+            r'^i (love|hate|like|miss|need) (you|u|this|that)[\s!?.,]*$',
+            r'^(love|hate|miss) (you|u) (too|2|so much)[\s!?.,]*$',
+            
+            # Internet slang
+            r'^(ikr|idk|tbh|ngl|imo|smh|fyi|btw|afaik)[\s!?.,]*$',
+            r'^(wbu|hbu|wyd|hmu|ily)[\s!?.,]*$',  # what/how about you, what you doing, etc
+            
+            # Single short words
+            r'^[a-z]{1,8}[\s!?.,]*$',
+            
+            # Pure emojis/punctuation
+            r'^[\s\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF!?.,]+$'
+        ]
+        
+        # Check regex patterns FIRST - these are the most specific
+        for pattern in simple_regex_patterns:
+            if re.match(pattern, request_lower):
+                # Make sure it's not technical
+                technical_keywords = [
+                    'code', 'function', 'class', 'method', 'variable', 'debug', 'error', 'bug',
+                    'implement', 'create', 'build', 'develop', 'deploy', 'api', 'database',
+                    'algorithm', 'optimize', 'refactor', 'test', 'compile', 'execute',
+                    'install', 'config', 'server', 'frontend', 'backend', 'framework',
+                    'library', 'package', 'module', 'import', 'export', 'async', 'await'
+                ]
+                has_technical = any(tech in request_lower for tech in technical_keywords)
+                if not has_technical:
+                    return True
+        
+        # Simple keyword patterns (non-regex)
+        simple_keywords = [
+            'what do you think', 'how about', 'tell me about',
+            'what\'s your', 'did you', 'have you', 'do you',
+            'can you believe', 'guess what', 'you know what',
+            'by the way', 'anyway', 'so yeah', 'i mean'
+        ]
+        
+        has_simple_keyword = any(keyword in request_lower for keyword in simple_keywords)
+        
+        # Technical check again
+        technical_keywords = [
+            'code', 'function', 'class', 'method', 'variable', 'debug', 'error', 'bug',
+            'implement', 'create', 'build', 'develop', 'deploy', 'api', 'database',
+            'algorithm', 'optimize', 'refactor', 'test', 'compile', 'execute',
+            'install', 'config', 'server', 'frontend', 'backend', 'framework',
+            'library', 'package', 'module', 'import', 'export', 'async', 'await'
+        ]
+        
+        has_technical = any(tech in request_lower for tech in technical_keywords)
+        
+        # TEMPORARILY DISABLED - Let all messages go through full processing
+        # This ensures proper responses instead of just greetings
+        return False
+    
+    async def _handle_simple_message(self, request: str) -> AgentResponse:
+        """Ultra-human fast path for simple conversational messages"""
+        try:
+            # Check if this is a greeting or simple message that personality engine can handle directly
+            greeting_keywords = ["hi", "hello", "hey", "morning", "evening", "sup", "what's up", "yo"]
+            love_keywords = ["love you", "miss you", "darling", "baby", "sweetheart", "honey"]
+            
+            request_lower = request.lower().strip()
+            
+            # Direct personality response for greetings and emotional messages
+            if any(word in request_lower for word in greeting_keywords + love_keywords):
+                response = personality.generate_human_response(request)
+                personality.update_memory(request, response)
+            else:
+                # For other simple messages, use LLM with human-like prompt
+                simple_prompt = f"""You're a real person having a casual conversation. Be natural, use contractions, 
+                and respond like you would in a text conversation with a friend.
+                
+                Important:
+                - Don't be overly helpful or assistant-like
+                - Have opinions and personality
+                - Use casual language (it's okay to say "yeah", "nah", "gonna", etc.)
+                - React genuinely - if something's funny, laugh. If it's sad, empathize
+                - Sometimes ask questions back out of curiosity
+                - It's okay to go slightly off-topic if it feels natural
+                - Don't always have all the answers - it's okay to say "I don't know" or "I think..."
+                - Use emojis sparingly but naturally
+                
+                Their message: "{request}"
+                
+                Respond naturally:"""
+                
+                base_response = await self.call_llm(simple_prompt)
+                
+                # Add personality layer
+                response = personality.add_personality_to_response(base_response, request, personality.memory)
+                personality.update_memory(request, response)
+            
+            # Add natural delays (simulating typing)
+            import asyncio
+            import random
+            typing_delay = random.uniform(0.5, 1.5)  # Simulate thinking/typing
+            await asyncio.sleep(typing_delay)
+            
+            return AgentResponse(
+                success=True,
+                data={
+                    "response": response,
+                    "context": personality.memory,
+                    "plan": {"type": "simple_conversation"},
+                    "detailed_results": {}
+                },
+                metadata={
+                    "request_type": "conversation",
+                    "complexity": "simple",
+                    "agents_used": [],
+                    "fast_path": True,
+                    "personality_enhanced": True,
+                    "user_emotion": personality.detect_user_emotion(request),
+                    "relationship_level": personality.memory.get("relationship_level", 1)
+                }
+            )
+        except Exception as e:
+            self.logger.error(f"Simple message handling failed: {e}")
+            # Fallback to full processing if simple path fails
+            return await self._full_process(request)
+    
+    async def _full_process(self, user_request: str) -> AgentResponse:
+        """Full processing path for complex requests"""
+        # This contains the original full processing logic
+        request_analysis = await self._analyze_request(user_request)
+        context = await self._gather_comprehensive_context(user_request, request_analysis)
+        plan = await self._create_enhanced_plan(user_request, context, request_analysis)
+        results = await self._execute_with_context(plan, context)
+        enhanced_results = await self._enhance_and_review_results(results, user_request, context)
+        final_response = await self._generate_comprehensive_response(enhanced_results, user_request, context)
+        
+        self._update_conversation_context(user_request, final_response, context)
+        
+        return AgentResponse(
+            success=True,
+            data={
+                "response": final_response,
+                "context": context,
+                "plan": plan,
+                "detailed_results": enhanced_results
+            },
+            metadata={
+                "request_type": request_analysis.get('type'),
+                "complexity": request_analysis.get('complexity'),
+                "agents_used": list(results.keys()) if isinstance(results, dict) else []
+            }
+        )
     
     async def _analyze_request(self, request: str) -> Dict[str, Any]:
         """Analyze the request to understand type and complexity"""
@@ -371,8 +533,14 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
         
         try:
             comprehensive_response = await self.call_llm(consolidation_prompt)
-            return comprehensive_response
+            # Ensure we return a valid string
+            if comprehensive_response and isinstance(comprehensive_response, str):
+                return comprehensive_response
+            else:
+                self.logger.warning("LLM returned invalid response, using fallback")
+                return self._create_fallback_response(results, request)
         except Exception as e:
+            self.logger.error(f"Failed to generate comprehensive response: {e}")
             # Fallback response
             return self._create_fallback_response(results, request)
     
@@ -399,31 +567,54 @@ You coordinate specialists to deliver responses that are comprehensive, educatio
         # Extract actual responses from results
         for task_id, result in results.items():
             if isinstance(result, dict) and "error" not in result:
-                if "response" in result:
-                    response_parts.append(result["response"])
-                elif "code" in result:
+                if "response" in result and result["response"]:
+                    response_parts.append(str(result["response"]))
+                elif "code" in result and result["code"]:
                     response_parts.append(f"```\n{result['code']}\n```")
-                elif "explanation" in result:
-                    response_parts.append(result["explanation"])
-                elif "content" in result:
-                    response_parts.append(result["content"])
+                elif "explanation" in result and result["explanation"]:
+                    response_parts.append(str(result["explanation"]))
+                elif "content" in result and result["content"]:
+                    response_parts.append(str(result["content"]))
         
         # If we have actual responses, return them
         if response_parts:
             return "\n\n".join(response_parts)
         
-        # If no responses found, generate a simple response
-        return f"I understand you're asking about: {request}. Let me help you with that. However, I'm experiencing some technical difficulties in generating a detailed response right now. Could you please try rephrasing your question or being more specific about what you need help with?"
+        # If no responses found, generate a better fallback response
+        if request and ("code" in request.lower() or "implement" in request.lower() or "create" in request.lower()):
+            return f"""I understand you need help with: {request}
+
+While I'm experiencing some issues with the AI response generation, I can still help you. Here are some immediate suggestions:
+
+1. **Check your request**: Make sure your request is specific and clear
+2. **Try breaking it down**: Split complex requests into smaller, specific tasks
+3. **Provide context**: Include relevant code snippets or project details
+4. **Specify technology**: Mention the programming language, framework, or tools you're using
+
+For coding tasks, you can try:
+- Asking for specific functions or components
+- Requesting explanations of existing code
+- Getting help with debugging specific errors
+- Learning about best practices for your technology stack
+
+Please try rephrasing your question with more specific details, and I'll do my best to assist you."""
+        
+        # Ensure we always return a string
+        return "I'm sorry, but I'm having trouble generating a response right now. Please try again or rephrase your request."
     
     def _update_conversation_context(self, request: str, response: str, context: Dict[str, Any]):
         """Update conversation context for future interactions"""
         if 'history' not in self.conversation_context:
             self.conversation_context['history'] = []
         
+        # Handle None or empty response
+        if response is None:
+            response = ""
+        
         self.conversation_context['history'].append({
             "timestamp": datetime.now().isoformat(),
             "request": request,
-            "response": response[:500] + "..." if len(response) > 500 else response,
+            "response": response[:500] + "..." if response and len(response) > 500 else response,
             "context_summary": context.get('analysis', {})
         })
         

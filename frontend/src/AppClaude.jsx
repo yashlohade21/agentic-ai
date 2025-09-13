@@ -1,0 +1,507 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Toaster, toast } from 'react-hot-toast';
+import { 
+  Bot, Menu, Settings, Sun, Moon, LogOut, Send, User, Plus, Search
+} from 'lucide-react';
+import { agentApi } from './api/agentApi';
+import AuthForm from './components/AuthForm';
+import ChatSidebar from './components/ChatSidebar';
+import MessageRenderer from './components/MessageRenderer';
+import WelcomeMessage from './components/WelcomeMessage';
+import AgentStatus from './components/AgentStatus';
+import './Claude.css';
+
+function AppClaude() {
+  // Auth State
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  
+  // Chat State
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // UI State
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [systemStatus, setSystemStatus] = useState({
+    status: 'active',
+    agents: [],
+    session_requests: 0
+  });
+  
+  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Initialize auth and dark mode
+  useEffect(() => {
+    checkAuthStatus();
+    
+    const savedDarkMode = localStorage.getItem('darkMode');
+    const systemDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldUseDarkMode = savedDarkMode ? JSON.parse(savedDarkMode) : systemDarkMode;
+    
+    setDarkMode(shouldUseDarkMode);
+    if (shouldUseDarkMode) {
+      document.documentElement.classList.add('theme-dark');
+    }
+  }, []);
+
+  // Save dark mode preference
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+    }
+  }, [darkMode]);
+
+  // Check backend connection when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkBackendConnection();
+    }
+  }, [isAuthenticated]);
+
+  const checkAuthStatus = async () => {
+    try {
+      const authStatus = await agentApi.checkAuth();
+      if (authStatus.authenticated) {
+        setUser(authStatus.user);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.log('Auth check failed:', error);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const checkBackendConnection = async () => {
+    try {
+      const health = await agentApi.healthCheck();
+      if (health.status === 'ok') {
+        setConnectionStatus('connected');
+        const status = await agentApi.getSystemStatus();
+        setSystemStatus(status);
+        toast.success('Connected to AI system', {
+          icon: '🤖',
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      setConnectionStatus('mock');
+      toast.error('Using offline mode', {
+        icon: '⚠️',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleLogin = async (credentials) => {
+    try {
+      const response = await agentApi.login(credentials);
+      setUser(response.user);
+      setIsAuthenticated(true);
+      toast.success(`Welcome back, ${response.user.username}!`);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleRegister = async (userData) => {
+    try {
+      const response = await agentApi.register(userData);
+      setUser(response.user);
+      setIsAuthenticated(true);
+      toast.success(`Welcome, ${response.user.username}!`);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await agentApi.logout();
+      setUser(null);
+      setIsAuthenticated(false);
+      setMessages([]);
+      setCurrentChatId(null);
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  const handleNewChat = async () => {
+    // Save current chat if it has messages
+    if (currentChatId && messages.length > 0) {
+      await saveCurrentChat();
+    }
+    
+    // Create new chat
+    try {
+      const newChat = await agentApi.createChat(user.uid || user.id, 'New Chat');
+      setCurrentChatId(newChat.id);
+      setMessages([]);
+      setInputValue('');
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      // Still clear for new chat even if save fails
+      setCurrentChatId(null);
+      setMessages([]);
+      setInputValue('');
+    }
+  };
+
+  const handleChatSelect = async (chatId) => {
+    // Save current chat before switching
+    if (currentChatId && messages.length > 0) {
+      await saveCurrentChat();
+    }
+    
+    // Load selected chat
+    try {
+      const chat = await agentApi.getChat(chatId);
+      setCurrentChatId(chatId);
+      setMessages(chat.messages || []);
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      toast.error('Failed to load chat');
+    }
+  };
+
+  const saveCurrentChat = async () => {
+    if (!currentChatId || messages.length === 0) return;
+    
+    try {
+      await agentApi.updateChat(currentChatId, messages);
+    } catch (error) {
+      console.error('Error saving chat:', error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    // Create chat if doesn't exist
+    if (!currentChatId && user) {
+      try {
+        const newChat = await agentApi.createChat(
+          user.uid || user.id, 
+          inputValue.substring(0, 50)
+        );
+        setCurrentChatId(newChat.id);
+      } catch (error) {
+        console.error('Error creating chat:', error);
+      }
+    }
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: inputValue,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue;
+    setInputValue('');
+    setIsLoading(true);
+
+    // Auto-resize textarea
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
+    try {
+      const response = await agentApi.sendMessage(currentInput);
+      const botMessage = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: response.response,
+        timestamp: new Date().toISOString(),
+        metadata: response.metadata
+      };
+      
+      const updatedMessages = [...messages, userMessage, botMessage];
+      setMessages(updatedMessages);
+      
+      // Save chat with new messages
+      if (currentChatId) {
+        await agentApi.updateChat(currentChatId, updatedMessages);
+      }
+      
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'error',
+        content: `Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      toast.error('Failed to send message');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const handleTextareaChange = (e) => {
+    setInputValue(e.target.value);
+    // Auto-resize textarea
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+  };
+
+  const refreshSystem = async () => {
+    setIsLoading(true);
+    try {
+      await checkBackendConnection();
+      toast.success('System refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh system');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Loading screen
+  if (authLoading) {
+    return (
+      <div className="claude-app">
+        <Toaster position="top-center" />
+        <div className="loading-state">
+          <div className="loading-spinner" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth screen
+  if (!isAuthenticated) {
+    return <AuthForm onLogin={handleLogin} onRegister={handleRegister} isLoading={authLoading} />;
+  }
+
+  return (
+    <div className="claude-app">
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: darkMode ? '#343541' : '#ffffff',
+            color: darkMode ? '#ececf1' : '#202123',
+            border: `1px solid ${darkMode ? '#565869' : '#e5e5e5'}`,
+          },
+        }}
+      />
+      
+      {/* Sidebar */}
+      <ChatSidebar
+        currentChatId={currentChatId}
+        onChatSelect={handleChatSelect}
+        onNewChat={handleNewChat}
+        isCollapsed={!sidebarOpen}
+        onToggleCollapse={() => setSidebarOpen(!sidebarOpen)}
+        user={user}
+      />
+      
+      {/* Main Chat Area */}
+      <main className="claude-main">
+        {/* Header */}
+        <header className="claude-header">
+          <div className="header-left">
+            <button
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="header-title">AI Assistant</h1>
+          </div>
+          
+          <div className="header-actions">
+            <button
+              className="header-btn"
+              onClick={() => setDarkMode(!darkMode)}
+              title={darkMode ? 'Light mode' : 'Dark mode'}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              className="header-btn"
+              onClick={() => setShowSettings(!showSettings)}
+              title="Settings"
+            >
+              <Settings size={18} />
+            </button>
+            <button
+              className="header-btn"
+              onClick={handleLogout}
+              title="Sign out"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        </header>
+        
+        {/* Messages Area */}
+        <div className="claude-messages">
+          <div className="messages-scroll-container">
+            {messages.length === 0 ? (
+              <div className="claude-welcome">
+                <div className="welcome-logo">
+                  <Bot size={32} color="white" />
+                </div>
+                <h2 className="welcome-title">How can I help you today?</h2>
+                <p className="welcome-subtitle">Ask me anything or try one of these examples</p>
+                
+                <div className="example-prompts-grid">
+                  <div 
+                    className="example-prompt-card"
+                    onClick={() => setInputValue("Explain quantum computing in simple terms")}
+                  >
+                    <div className="example-prompt-title">Learn</div>
+                    <div className="example-prompt-text">Explain quantum computing in simple terms</div>
+                  </div>
+                  <div 
+                    className="example-prompt-card"
+                    onClick={() => setInputValue("Write a Python function to sort a list")}
+                  >
+                    <div className="example-prompt-title">Code</div>
+                    <div className="example-prompt-text">Write a Python function to sort a list</div>
+                  </div>
+                  <div 
+                    className="example-prompt-card"
+                    onClick={() => setInputValue("Help me brainstorm ideas for a startup")}
+                  >
+                    <div className="example-prompt-title">Create</div>
+                    <div className="example-prompt-text">Help me brainstorm ideas for a startup</div>
+                  </div>
+                  <div 
+                    className="example-prompt-card"
+                    onClick={() => setInputValue("What are the latest AI trends?")}
+                  >
+                    <div className="example-prompt-title">Explore</div>
+                    <div className="example-prompt-text">What are the latest AI trends?</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="messages-list">
+                {messages.map((message) => (
+                  <div key={message.id} className={`message-row ${message.type}`}>
+                    <div className={`message-avatar ${message.type}`}>
+                      {message.type === 'user' ? <User size={16} /> : <Bot size={16} />}
+                    </div>
+                    <div className="message-content-wrapper">
+                      <MessageRenderer message={message} />
+                    </div>
+                  </div>
+                ))}
+                
+                {isLoading && (
+                  <div className="message-row assistant">
+                    <div className="message-avatar assistant">
+                      <Bot size={16} />
+                    </div>
+                    <div className="message-content-wrapper">
+                      <div className="thinking-dots">
+                        <div className="thinking-dot" />
+                        <div className="thinking-dot" />
+                        <div className="thinking-dot" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+        
+        {/* Input Area */}
+        <div className="claude-input-area">
+          <div className="input-container">
+            <div className="input-wrapper">
+              <textarea
+                ref={textareaRef}
+                className="claude-textarea"
+                value={inputValue}
+                onChange={handleTextareaChange}
+                onKeyPress={handleKeyPress}
+                placeholder="Message AI Assistant..."
+                disabled={isLoading}
+                rows={1}
+              />
+              <button
+                className="send-button"
+                onClick={sendMessage}
+                disabled={!inputValue.trim() || isLoading}
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="settings-modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-header">
+              <h2 className="settings-title">Settings</h2>
+              <button
+                className="settings-close"
+                onClick={() => setShowSettings(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="settings-content">
+              <AgentStatus
+                systemStatus={systemStatus}
+                connectionStatus={connectionStatus}
+                user={user}
+                onRefresh={refreshSystem}
+                onClearHistory={handleNewChat}
+                onLogout={handleLogout}
+                onToggleDarkMode={() => setDarkMode(!darkMode)}
+                darkMode={darkMode}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AppClaude;

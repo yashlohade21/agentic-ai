@@ -90,6 +90,12 @@ Example format:
                 else:
                     json_str = llm_response.strip()
                 
+                # Clean up JSON string to remove control characters
+                import re
+                json_str = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_str)
+                # Also remove any escaped control characters
+                json_str = json_str.replace('\\n', ' ').replace('\\t', ' ').replace('\\r', ' ')
+                
                 plan = json.loads(json_str)
                 if not isinstance(plan, list):
                     plan = [plan]

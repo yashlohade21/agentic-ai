@@ -27,22 +27,22 @@ const AgentStatus = ({
   const getConnectionIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <Wifi size={16} className="text-success-500" />;
+        return <Wifi size={16} className="text-green-500" />;
       case 'mock':
-        return <AlertTriangle size={16} className="text-warning-500" />;
+        return <AlertTriangle size={16} className="text-amber-500" />;
       default:
-        return <WifiOff size={16} className="text-error-500" />;
+        return <WifiOff size={16} className="text-red-500" />;
     }
   };
 
   const getConnectionColor = () => {
     switch (connectionStatus) {
       case 'connected':
-        return 'text-success-600 bg-success-50 dark:bg-success-900/20';
+        return 'text-green-600 bg-green-50 dark:bg-green-900/20';
       case 'mock':
-        return 'text-warning-600 bg-warning-50 dark:bg-warning-900/20';
+        return 'text-amber-600 bg-amber-50 dark:bg-amber-900/20';
       default:
-        return 'text-error-600 bg-error-50 dark:bg-error-900/20';
+        return 'text-red-600 bg-red-50 dark:bg-red-900/20';
     }
   };
 
@@ -95,7 +95,7 @@ const AgentStatus = ({
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
           <div className="flex items-center space-x-2 mb-2">
-            <Users size={16} className="text-primary-600" />
+            <Users size={16} className="text-blue-600" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Agents</span>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -105,7 +105,7 @@ const AgentStatus = ({
 
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
           <div className="flex items-center space-x-2 mb-2">
-            <TrendingUp size={16} className="text-success-600" />
+            <TrendingUp size={16} className="text-green-600" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Requests</span>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -130,8 +130,8 @@ const AgentStatus = ({
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <motion.div
                   className={`h-2 rounded-full ${
-                    value > 80 ? 'bg-error-500' :
-                    value > 60 ? 'bg-warning-500' : 'bg-success-500'
+                    value > 80 ? 'bg-red-500' :
+                    value > 60 ? 'bg-amber-500' : 'bg-green-500'
                   }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${value}%` }}
@@ -163,7 +163,7 @@ const AgentStatus = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <motion.div
-                className="w-3 h-3 bg-success-500 rounded-full"
+                className="w-3 h-3 bg-green-500 rounded-full"
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
               />
@@ -212,7 +212,7 @@ const AgentStatus = ({
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Status</span>
-            <span className="text-success-600 font-medium flex items-center">
+            <span className="text-green-600 font-medium flex items-center">
               <CheckCircle size={14} className="mr-1" />
               Operational
             </span>
@@ -227,7 +227,7 @@ const AgentStatus = ({
         <motion.button
           onClick={onRefresh}
           disabled={isLoading}
-          className="w-full flex items-center justify-center space-x-2 p-3 bg-primary-600 text-grey rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -237,7 +237,7 @@ const AgentStatus = ({
 
         <motion.button
           onClick={onClearHistory}
-          className="w-full flex items-center justify-center space-x-2 p-3 bg-warning-600 text-grey rounded-lg hover:bg-warning-700 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 p-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -247,7 +247,7 @@ const AgentStatus = ({
 
         <motion.button
           onClick={onLogout}
-          className="w-full flex items-center justify-center space-x-2 p-3 bg-error-600 text-grey rounded-lg hover:bg-error-700 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -268,11 +268,11 @@ const AgentStatus = ({
       {/* User Info */}
       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
         <div className="flex items-center space-x-4 mb-4">
-          <div className="w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
-            <Users size={24} className="text-grey" />
+          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+            <Users size={24} className="text-white" />
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-grey">
+            <h4 className="font-semibold text-gray-900 dark:text-white">
               {user?.username || 'User'}
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -300,14 +300,14 @@ const AgentStatus = ({
       {/* User Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold text-primary-600 mb-1">
+          <div className="text-2xl font-bold text-blue-600 mb-1">
             {Math.floor(Math.random() * 50) + 10}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Messages Sent</div>
         </div>
         
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold text-success-600 mb-1">
+          <div className="text-2xl font-bold text-green-600 mb-1">
             {Math.floor(Math.random() * 20) + 5}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Tasks Completed</div>
@@ -336,7 +336,7 @@ const AgentStatus = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-          <Activity size={20} className="mr-2 text-primary-600" />
+          <Activity size={20} className="mr-2 text-blue-600" />
           <span className="hidden sm:inline">System Dashboard</span>
           <span className="sm:hidden">Dashboard</span>
         </h3>
@@ -355,7 +355,7 @@ const AgentStatus = ({
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
               whileHover={{ scale: 1.02 }}

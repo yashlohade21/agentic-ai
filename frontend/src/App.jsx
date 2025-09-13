@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
 import { 
   Bot, Settings, History, FileText, Brain, Search, Code, Eye, X, RefreshCw, 
-  LogOut, Menu, Sun, Moon, Zap, MessageSquare, Users, Activity, Sparkles
+  LogOut, Menu, Sun, Moon, MessageSquare, Users, Activity, Plus, Send, ChevronLeft
 } from 'lucide-react';
 import { agentApi } from './api/agentApi';
 import MessageRenderer from './components/MessageRenderer';
@@ -11,6 +10,7 @@ import WelcomeMessage from './components/WelcomeMessage';
 import ChatInput from './components/ChatInput';
 import AuthForm from './components/AuthForm';
 import AgentStatus from './components/AgentStatus';
+import ChatSidebar from './components/ChatSidebar';
 import DeepLearningDashboard from './components/DeepLearningDashboard';
 import './App.css';
 
@@ -21,6 +21,10 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [refreshSidebar, setRefreshSidebar] = useState(0);
+  const sidebarRef = useRef(null);
   const [systemStatus, setSystemStatus] = useState({
     status: 'active',
     agents: ['enhanced_orchestrator', 'enhanced_coder', 'researcher'],
@@ -55,13 +59,29 @@ function App() {
 
   useEffect(() => {
     checkAuthStatus();
+    
+    // Initialize dark mode from localStorage or system preference
+    const savedDarkMode = localStorage.getItem('darkMode');
+    const systemDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldUseDarkMode = savedDarkMode ? JSON.parse(savedDarkMode) : systemDarkMode;
+    
+    setDarkMode(shouldUseDarkMode);
+    if (shouldUseDarkMode) {
+      document.documentElement.classList.add('theme-dark');
+      document.body.classList.add('theme-dark');
+    }
   }, []);
+  
+  // Save dark mode preference
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
 
   useEffect(() => {
     if (isAuthenticated) {
       checkBackendConnection();
       
-      // Set up periodic auth check every 5 minutes
+      // Reduced frequency of auth checks to 15 minutes for better performance
       const authCheckInterval = setInterval(async () => {
         const authStatus = await agentApi.checkAuth();
         if (!authStatus.authenticated) {
@@ -76,7 +96,7 @@ function App() {
           setMessages([]);
           setConnectionStatus('disconnected');
         }
-      }, 5 * 60 * 1000); // 5 minutes
+      }, 15 * 60 * 1000); // 15 minutes instead of 5
       
       return () => clearInterval(authCheckInterval);
     }
@@ -202,6 +222,19 @@ function App() {
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
+    // Create a new chat if there isn't one
+    let chatId = currentChatId;
+    if (!chatId && user) {
+      try {
+        const userId = user.uid || user.id;
+        const newChat = await agentApi.createChat(userId, inputValue.substring(0, 50));
+        chatId = newChat.id;
+        setCurrentChatId(chatId);
+      } catch (error) {
+        console.error('Failed to create chat:', error);
+      }
+    }
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
@@ -209,7 +242,8 @@ function App() {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     const currentInput = inputValue;
     setInputValue('');
     setIsLoading(true);
@@ -223,7 +257,22 @@ function App() {
         timestamp: new Date(),
         metadata: response.metadata
       };
-      setMessages(prev => [...prev, botMessage]);
+      const allMessages = [...updatedMessages, botMessage];
+      setMessages(allMessages);
+      
+      // Save messages to chat history
+      if (chatId) {
+        await agentApi.updateChat(chatId, allMessages.map(msg => ({
+          content: msg.content,
+          type: msg.type,
+          timestamp: msg.timestamp?.toISOString() || new Date().toISOString()
+        })));
+        // Trigger sidebar refresh to show updated chat with a slight delay
+        setTimeout(() => {
+          setRefreshSidebar(prev => prev + 1);
+        }, 100);
+      }
+      
       toast.success('Response received', {
         icon: '✨',
         duration: 1500,
@@ -252,20 +301,44 @@ function App() {
     }
   };
 
-  const clearHistory = async () => {
+  const handleNewChat = () => {
+    setMessages([]);
+    setCurrentChatId(null);
+    setInputValue('');
+    // Trigger sidebar refresh to show the new state
+    setRefreshSidebar(prev => prev + 1);
+    toast.success('New chat started', {
+      icon: '✨',
+      duration: 1500,
+    });
+  };
+
+  const handleChatSelect = async (chatId) => {
     try {
-      if (connectionStatus === 'connected') {
-        await agentApi.clearHistory();
+      setIsLoading(true);
+      const chat = await agentApi.getChat(chatId);
+      if (chat && chat.messages) {
+        setMessages(chat.messages.map((msg, index) => ({
+          ...msg,
+          id: index,
+          timestamp: new Date(msg.timestamp)
+        })));
+        setCurrentChatId(chatId);
+        toast.success('Chat loaded', {
+          icon: '📂',
+          duration: 1000,
+        });
       }
-      setMessages([]);
-      toast.success('Chat history cleared', {
-        icon: '🧹',
-        duration: 2000,
-      });
     } catch (error) {
-      console.error('Error clearing history:', error);
-      setMessages([]);
+      console.error('Error loading chat:', error);
+      toast.error('Failed to load chat');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const clearHistory = async () => {
+    handleNewChat();
   };
 
   const refreshSystem = async () => {
@@ -288,14 +361,25 @@ function App() {
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    
+    // Update document class for consistent theming
+    if (newDarkMode) {
+      document.documentElement.classList.add('theme-dark');
+      document.body.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+      document.body.classList.remove('theme-dark');
+    }
+    
     toast.success(`${darkMode ? 'Light' : 'Dark'} mode activated`, {
       icon: darkMode ? '☀️' : '🌙',
       duration: 2000,
     });
   };
 
-  // Loading screen with enhanced animations
+  // Professional loading screen
   if (authLoading) {
     return (
       <div className="loading-screen">
@@ -304,54 +388,22 @@ function App() {
           toastOptions={{
             duration: 3000,
             style: {
-              background: darkMode ? '#1f2937' : '#ffffff',
-              color: darkMode ? '#f9fafb' : '#111827',
-              border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
-              borderRadius: '12px',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+              background: darkMode ? '#1e293b' : '#ffffff',
+              color: darkMode ? '#e2e8f0' : '#334155',
+              border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             },
           }}
         />
-        <motion.div 
-          className="loading-content"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.div
-            className="mb-8"
-            animate={{ 
-              rotate: 360,
-              scale: [1, 1.1, 1]
-            }}
-            transition={{ 
-              rotate: { duration: 2, repeat: Infinity, ease: "linear" },
-              scale: { duration: 1, repeat: Infinity, ease: "easeInOut" }
-            }}
-          >
-            <Bot size={64} />
-          </motion.div>
-          <motion.h2 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            BinaryBrained
-          </motion.h2>
-          <motion.p 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            Initializing AI System...
-          </motion.p>
-          <motion.div 
-            className="loading-spinner"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-          />
-        </motion.div>
+        <div className="loading-content">
+          <div className="mb-8">
+            <Bot size={48} />
+          </div>
+          <h2>AI Business Assistant</h2>
+          <p>Loading application...</p>
+          <div className="loading-spinner" />
+        </div>
       </div>
     );
   }
@@ -364,93 +416,57 @@ function App() {
   // Render Deep Learning Dashboard
   if (currentView === 'deeplearning') {
     return (
-      <div className={`app ${darkMode ? 'dark' : ''}`}>
+      <div className="modern-app">
         <Toaster 
-          position="top-right"
+          position="top-center"
           toastOptions={{
             duration: 3000,
             style: {
-              background: darkMode ? '#1f2937' : '#ffffff',
-              color: darkMode ? '#f9fafb' : '#111827',
-              border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
-              borderRadius: '12px',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+              background: darkMode ? '#2d3748' : '#ffffff',
+              color: darkMode ? '#e2e8f0' : '#1a202c',
+              border: `1px solid ${darkMode ? '#4a5568' : '#e2e8f0'}`,
+              borderRadius: '8px',
+              fontSize: '14px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             },
           }}
         />
         
         {/* Header for Deep Learning View */}
-        <motion.header 
-          className="app-header"
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="header-left">
-            <motion.button
-              className="menu-btn"
+        <header className="modern-header">
+          <div className="header-content">
+            <button
+              className="back-btn"
               onClick={() => setCurrentView('chat')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
-              <MessageSquare size={20} />
-            </motion.button>
+              <ChevronLeft size={20} />
+              <span>Back to Chat</span>
+            </button>
             
-            <motion.div 
-              className="app-title-section"
-              whileHover={{ scale: 1.02 }}
-            >
-              <div className="app-icon-container">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                >
-                  <Brain size={32} className="app-icon" />
-                </motion.div>
-                <motion.div
-                  className="status-dot active"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-              </div>
-              <div>
-                <h1 className="gradient-text">Deep Learning Hub</h1>
-              </div>
-            </motion.div>
-          </div>
+            <div className="header-title">
+              <Brain size={24} />
+              <h1>Analytics Dashboard</h1>
+            </div>
 
-          <div className="header-right">
-            <motion.div 
-              className="user-info"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Users size={16} />
-              <span>{user?.username}</span>
-            </motion.div>
-
-            <div className="desktop-buttons">
-              <motion.button
-                className="header-btn"
+            <div className="header-actions">
+              <button
+                className="header-action-btn"
                 onClick={toggleDarkMode}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-              </motion.button>
+                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
 
-              <motion.button
-                className="header-btn logout-btn"
+              <button
+                className="header-action-btn logout"
                 onClick={handleLogout}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                title="Sign out"
               >
-                <LogOut size={20} />
-              </motion.button>
+                <LogOut size={18} />
+              </button>
             </div>
           </div>
-        </motion.header>
+        </header>
 
         <DeepLearningDashboard />
       </div>
@@ -458,423 +474,159 @@ function App() {
   }
 
   return (
-    <div className={`app ${darkMode ? 'dark' : ''}`}>
+    <div className="modern-app">
       <Toaster 
-        position="top-right"
+        position="top-center"
         toastOptions={{
           duration: 3000,
           style: {
-            background: darkMode ? '#1f2937' : '#ffffff',
-            color: darkMode ? '#f9fafb' : '#111827',
-            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+            background: darkMode ? '#2d3748' : '#ffffff',
+            color: darkMode ? '#e2e8f0' : '#1a202c',
+            border: `1px solid ${darkMode ? '#4a5568' : '#e2e8f0'}`,
+            borderRadius: '8px',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           },
         }}
       />
       
-      {/* Enhanced Header */}
-      <motion.header 
-        className="app-header"
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="header-left">
-          <motion.button
-            className="menu-btn"
-            onClick={() => setShowSidebar(!showSidebar)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Menu size={20} />
-          </motion.button>
-          
-          <motion.div 
-            className="app-title-section"
-            whileHover={{ scale: 1.02 }}
-          >
-            <div className="app-icon-container">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <Bot size={32} className="app-icon" />
-              </motion.div>
-              <motion.div
-                className="status-dot active"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-            </div>
-            <div>
-              <h1 className="gradient-text">Binarybrained</h1>
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="header-right">
-          {/* Always visible user info */}
-          <motion.div 
-            className="user-info"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Users size={16} />
-            <span>{user?.username}</span>
-          </motion.div>
-
-          {/* Desktop buttons - visible on larger screens */}
-          <div className="desktop-buttons">
-              <motion.button
-                className="header-btn"
+      <div className="app-layout">
+        {/* Chat Sidebar with History */}
+        <ChatSidebar 
+          currentChatId={currentChatId}
+          onChatSelect={handleChatSelect}
+          onNewChat={handleNewChat}
+          isCollapsed={!showSidebar}
+          onToggleCollapse={() => setShowSidebar(!showSidebar)}
+          user={user}
+          refreshTrigger={refreshSidebar}
+        />
+        
+        {/* Additional Sidebar Controls */}
+        {showSidebar && (
+          <div className="sidebar-extras">
+            <div className="sidebar-footer">
+              <button 
+                className="sidebar-footer-btn"
                 onClick={() => setCurrentView('deeplearning')}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Deep Learning Hub"
               >
-                <Brain size={20} />
-              </motion.button>
-
-              <motion.button
-                    className="header-btn"
-                    onClick={toggleDarkMode}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-                  </motion.button>
-
-                  <motion.button
-                    className="header-btn"
-                    onClick={() => setShowSidebar(!showSidebar)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <History size={20} />
-                  </motion.button>
-
-                  <motion.button
-                    className="header-btn"
-                    onClick={() => setShowSettings(!showSettings)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Settings size={20} />
-                  </motion.button>
-
-                  <motion.button
-                    className="header-btn logout-btn"
-                    onClick={handleLogout}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                <LogOut size={20} />
-                  </motion.button>
-          </div>
-
-          {/* Mobile menu button - visible on small screens */}
-          <motion.button
-            className="mobile-menu-btn"
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Menu size={20} />
-          </motion.button>
-        </div>
-      </motion.header>
-
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {showMobileMenu && (
-          <motion.div
-            className="mobile-menu"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.button
-              className="mobile-menu-item"
-              onClick={() => {
-                setCurrentView('deeplearning');
-                setShowMobileMenu(false);
-              }}
-            >
-              <Brain size={20} />
-              <span>Deep Learning</span>
-            </motion.button>
-
-            <motion.button
-              className="mobile-menu-item"
-              onClick={() => {
-                toggleDarkMode();
-                setShowMobileMenu(false);
-              }}
-            >
-              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-            </motion.button>
-
-            <motion.button
-                className="mobile-menu-item"
+                <Brain size={16} />
+                <span>Analytics</span>
+              </button>
+              <button 
+                className="sidebar-footer-btn"
                 onClick={() => setShowSettings(!showSettings)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
               >
-                <Settings size={20} />
-                    <span>Settings</span>
-            </motion.button>
-
-            <motion.button
-              className="mobile-menu-item"
-              onClick={() => {
-                setShowSidebar(!showSidebar);
-                setShowMobileMenu(false);
-              }}
-            >
-              <History size={20} />
-              <span>History</span>
-            </motion.button>
-            
-            <motion.button
-              className="mobile-menu-item logout"
-              onClick={() => {
-                handleLogout();
-                setShowMobileMenu(false);
-              }}
-            >
-              <LogOut size={20} />
-              <span>Logout</span>
-            </motion.button>
-          </motion.div>
+                <Settings size={16} />
+                <span>Settings</span>
+              </button>
+              <button 
+                className="sidebar-footer-btn"
+                onClick={toggleDarkMode}
+              >
+                {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+                <span>{darkMode ? 'Light' : 'Dark'}</span>
+              </button>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
-      <div className="app-body">
-        {/* Enhanced Sidebar */}
-        <AnimatePresence>
-          {showSidebar && (
-            <motion.aside
-              className="sidebar open"
-              initial={{ x: -320, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -320, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              <div className="sidebar-content">
-                {/* Agent Status */}
-                <motion.div
-                  className="agents-panel"
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  <h3>
-                    <Activity size={20} />
-                    Active Agents
-                  </h3>
-                  <div className="agents-list">
-                    {activeAgents.map((agent, index) => {
-                      const IconComponent = agentIcons[agent] || Bot;
-                      return (
-                        <motion.div
-                          key={agent}
-                          className="agent-item"
-                          initial={{ x: -20, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.1 * index }}
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <motion.div
-                            animate={{ rotate: [0, 5, -5, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, delay: index * 0.5 }}
-                          >
-                            <IconComponent size={18} />
-                          </motion.div>
-                          <span>{agent.replace(/_/g, ' ')}</span>
-                          <motion.div
-                            className="agent-status-indicator"
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
-                          />
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-
-                {/* Chat History */}
-                <motion.div
-                  className="history-panel"
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <div className="panel-header">
-                    <h3>
-                      <MessageSquare size={20} />
-                      Recent Chats
-                    </h3>
-                    <motion.button
-                      className="clear-btn"
-                      onClick={clearHistory}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Clear
-                    </motion.button>
-                  </div>
-                  <div className="history-list">
-                    {messages.filter(m => m.type === 'user').slice(-10).map((msg, index) => (
-                      <motion.div
-                        key={msg.id}
-                        className="history-item"
-                        onClick={() => setInputValue(msg.content)}
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.05 * index }}
-                        whileHover={{ scale: 1.02, x: 5 }}
-                      >
-                        <p>{msg.content.substring(0, 80)}{msg.content.length > 80 ? '...' : ''}</p>
-                        <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                      </motion.div>
-                    ))}
-                    {messages.filter(m => m.type === 'user').length === 0 && (
-                      <div className="empty-history">
-                        <MessageSquare size={32} />
-                        <p>No conversations yet</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
 
         {/* Main Chat Area */}
-        <main className="chat-container">
-          <div className="messages-container">
-            <AnimatePresence>
-              {messages.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <WelcomeMessage onExampleClick={setInputValue} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+        <main className="main-content">
+          <div className="chat-header">
+            <div className="chat-title">
+              <Bot size={24} className="chat-icon" />
+              <div>
+                <h1>AI Assistant</h1>
+                <span className="status">Online • {user?.username}</span>
+              </div>
+            </div>
+            
+            <div className="chat-actions">
+              <button 
+                className="action-btn"
+                onClick={handleLogout}
+                title="Sign out"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          </div>
 
-            <div className="messages-list">
-              <AnimatePresence>
-                {messages.map((message, index) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                    transition={{ 
-                      duration: 0.3,
-                      delay: index * 0.05,
-                      ease: "easeOut"
-                    }}
-                  >
-                    <MessageRenderer message={message} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+          <div className="messages-area">
+            {messages.length === 0 && (
+              <WelcomeMessage onExampleClick={setInputValue} />
+            )}
+
+            <div className="messages-container">
+              {messages.map((message, index) => (
+                <div key={message.id} className="message-wrapper">
+                  <MessageRenderer message={message} />
+                </div>
+              ))}
 
               {isLoading && (
-                <motion.div
-                  className="loading-message"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <div className="message bot loading">
-                    <div className="message-header">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Bot size={20} />
-                      </motion.div>
-                      <span>Binarybrained is thinking...</span>
+                <div className="message-wrapper">
+                  <div className="assistant-message thinking">
+                    <div className="message-avatar">
+                      <Bot size={20} />
                     </div>
                     <div className="message-content">
-                      <div className="typing-indicator">
-                        {[0, 1, 2].map((i) => (
-                          <motion.div
-                            key={i}
-                            className="typing-dot"
-                            animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.5, 1, 0.5]
-                            }}
-                            transition={{
-                              duration: 1.5,
-                              repeat: Infinity,
-                              delay: i * 0.2
-                            }}
-                          />
-                        ))}
+                      <div className="thinking-indicator">
+                        <div className="dot"></div>
+                        <div className="dot"></div>
+                        <div className="dot"></div>
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
             </div>
             
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Enhanced Chat Input */}
-          <motion.div 
-            className="chat-input-section"
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <ChatInput 
-              inputValue={inputValue}
-              setInputValue={setInputValue}
-              onSendMessage={sendMessage}
-              isLoading={isLoading}
-              onKeyPress={handleKeyPress}
-            />
-          </motion.div>
+          <div className="input-area">
+            <div className="input-container">
+              <div className="input-wrapper">
+                <textarea
+                  className="message-input"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Message AI Assistant..."
+                  rows={1}
+                  disabled={isLoading}
+                  onInput={(e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                />
+                <button
+                  className="send-btn"
+                  onClick={sendMessage}
+                  disabled={!inputValue.trim() || isLoading}
+                >
+                  <Send size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
         </main>
 
-        {/* Enhanced Settings Panel */}
-        <AnimatePresence>
-          {showSettings && (
-            <motion.aside
-              className="settings-panel open"
-              initial={{ x: 320, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 320, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              <div className="panel-header">
-                <h3>
-                  <Settings size={20} />
-                  Settings
-                </h3>
-                <motion.button
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="settings-overlay">
+            <div className="settings-modal">
+              <div className="settings-header">
+                <h2>Settings</h2>
+                <button
                   className="close-btn"
                   onClick={() => setShowSettings(false)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   <X size={20} />
-                </motion.button>
+                </button>
               </div>
-
               <div className="settings-content">
                 <AgentStatus 
                   systemStatus={systemStatus}
@@ -888,9 +640,9 @@ function App() {
                   isLoading={isLoading}
                 />
               </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

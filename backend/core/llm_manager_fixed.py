@@ -17,36 +17,68 @@ class LLMProvider(ABC):
         self.config = kwargs
         self.available = True
         self.error_count = 0
-        self.max_errors = 3
+        self.max_errors = 2  # Reduced from 3 to 2 for faster failure
         self.last_error_time = None
-        self.cooldown_period = 300  # 5 minutes cooldown after errors
+        self.cooldown_period = 180  # Reduced from 5 minutes to 3 minutes
+        self.consecutive_failures = 0
+        self.rate_limited = False
+        self.rate_limit_reset_time = None
     
     @abstractmethod
     async def generate(self, prompt: str, system_prompt: str = None) -> str:
         """Generate response from the LLM"""
         pass
     
-    def mark_error(self):
+    def mark_error(self, error_type="general"):
         """Mark an error and disable if too many errors"""
         self.error_count += 1
+        self.consecutive_failures += 1
         self.last_error_time = time.time()
+        
+        # Handle specific error types
+        if error_type == "rate_limit":
+            self.rate_limited = True
+            self.rate_limit_reset_time = time.time() + 60  # 1 minute rate limit cooldown
+            logger.warning(f"Provider {self.name} is rate limited")
+        elif error_type == "auth":
+            # Auth errors are likely permanent - disable immediately
+            self.available = False
+            self.error_count = self.max_errors
+            logger.error(f"Provider {self.name} disabled due to authentication error")
+        
         if self.error_count >= self.max_errors:
             self.available = False
-            logger.warning(f"Provider {self.name} disabled due to too many errors")
+            logger.warning(f"Provider {self.name} disabled due to {self.error_count} errors")
     
     def reset_errors(self):
         """Reset error count and re-enable provider"""
         self.error_count = 0
+        self.consecutive_failures = 0
         self.available = True
         self.last_error_time = None
+        self.rate_limited = False
+        self.rate_limit_reset_time = None
     
     def can_retry(self) -> bool:
         """Check if provider can be retried after cooldown"""
+        current_time = time.time()
+        
+        # Check rate limiting first
+        if self.rate_limited and self.rate_limit_reset_time:
+            if current_time < self.rate_limit_reset_time:
+                return False
+            else:
+                self.rate_limited = False
+                self.rate_limit_reset_time = None
+        
         if self.available:
             return True
-        if self.last_error_time and (time.time() - self.last_error_time) > self.cooldown_period:
+            
+        # Check general cooldown
+        if self.last_error_time and (current_time - self.last_error_time) > self.cooldown_period:
             self.reset_errors()
             return True
+            
         return False
 
 class BinaryBrainedProvider(LLMProvider):
@@ -323,7 +355,18 @@ class LLMManager:
                 
             except Exception as e:
                 last_error = e
-                self.logger.warning(f"Provider {provider.name} failed: {e}")
+                error_str = str(e).lower()
+                
+                # Detect specific error types for better handling
+                if "401" in error_str or "invalid credentials" in error_str or "unauthorized" in error_str:
+                    provider.mark_error("auth")
+                    self.logger.warning(f"Provider {provider.name} failed with auth error: {e}")
+                elif "rate limit" in error_str or "429" in error_str or "rate limited" in error_str:
+                    provider.mark_error("rate_limit") 
+                    self.logger.warning(f"Provider {provider.name} is rate limited")
+                else:
+                    provider.mark_error("general")
+                    self.logger.warning(f"Provider {provider.name} failed: {e}")
                 
                 # If this was the last attempt, try local provider
                 if attempt == max_retries - 1 and provider.name != "local":

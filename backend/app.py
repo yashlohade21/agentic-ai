@@ -5,6 +5,7 @@ from routes.chat import chat_bp
 from routes.media import media_bp
 from routes.chat_history import chat_history_bp
 from routes.dl_routes import dl_bp
+from routes.chats import chats_bp
 from core.model_manager_lite import model_manager
 from core.llm_manager_fixed import create_llm_manager
 from core.config import settings
@@ -23,9 +24,14 @@ def create_app():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Configuration - Environment-specific settings
+    # Configuration - Environment-specific settings with better session handling
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)  # Extended to 2 hours
+    
+    # Session configuration for better performance
+    app.config['SESSION_PERMANENT'] = True
+    app.config['SESSION_USE_SIGNER'] = True
+    app.config['SESSION_KEY_PREFIX'] = 'binarybrained:'
     
     # Session cookie settings - different for development vs production
     is_production = os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER')
@@ -71,6 +77,7 @@ def create_app():
     app.register_blueprint(chat_bp, url_prefix='/api')
     app.register_blueprint(media_bp, url_prefix='/api/media')
     app.register_blueprint(chat_history_bp, url_prefix='/api/chat-history')
+    app.register_blueprint(chats_bp)
     app.register_blueprint(dl_bp)
     
     # Health check endpoint

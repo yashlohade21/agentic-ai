@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime
 # Removed unused langchain imports that were causing import issues
-from core.llm_manager import LLMManager, OllamaProvider, GeminiProvider, BinaryBrainedProvider, MistralProvider
+from core.llm_manager import LLMManager, OllamaProvider, GeminiProvider, BinaryBrainedProvider, MistralProvider, HuggingFaceProvider
 import os
 
 class AgentMessage(BaseModel):
@@ -51,7 +51,13 @@ class BaseAgent(ABC):
                 elif provider_name == "binarybrained" and settings.binarybrained_api_key:
                     providers.append(BinaryBrainedProvider(
                         api_key=settings.binarybrained_api_key,
-                        model_name="llama3-8b-8192"
+                        model_name=settings.default_model  # Use the configured model
+                    ))
+                elif provider_name == "huggingface":
+                    # HuggingFace works without API key for some models
+                    providers.append(HuggingFaceProvider(
+                        api_token=settings.huggingface_api_token,
+                        model_name="mistralai/Mixtral-8x7B-Instruct-v0.1"
                     ))
                 elif provider_name == "mistral" and settings.mistral_api_key:
                     providers.append(MistralProvider(

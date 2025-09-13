@@ -14,21 +14,40 @@ class Config:
         self.anthropic_api_key: Optional[str] = os.getenv('ANTHROPIC_API_KEY')
         self.binarybrained_api_key: Optional[str] = os.getenv('BINARYBRAINED_API_KEY')
         self.mistral_api_key: Optional[str] = os.getenv('MISTRAL_API_KEY')       
-        # Free LLM API Keys
-        self.huggingface_api_token: Optional[str] = os.getenv('HUGGINGFACE_API_TOKEN')
+        # Free LLM API Keys - only use if real tokens provided
+        self.huggingface_api_token: Optional[str] = os.getenv('HUGGINGFACE_API_TOKEN') if os.getenv('HUGGINGFACE_API_TOKEN', '').startswith('hf_') else None
         self.google_api_key: Optional[str] = os.getenv('GOOGLE_API_KEY')
         
         # Local LLM Settings
         self.ollama_base_url: str = os.getenv('OLLAMA_BASE_URL', "http://localhost:11434")
         self.ollama_model: str = os.getenv('OLLAMA_MODEL', "llama3.2")
         
-        # LLM Provider Priority (first available will be used) - BinaryBrained prioritized
+        # Optimized LLM Provider Priority - working providers first, fastest to slowest
+        # Mistral is working well, BinaryBrained has rate limits, skip broken providers
+        available_providers = []
         
-        self.llm_providers: List[str] = ["binarybrained", "mistral", "ollama", "huggingface", "gemini"]
+        # Add providers only if they have valid credentials or are always available
+        if self.mistral_api_key:
+            available_providers.append("mistral")
+        if self.binarybrained_api_key:
+            available_providers.append("binarybrained")
+        if self.huggingface_api_token:
+            available_providers.append("huggingface")
+        if self.google_api_key:
+            available_providers.append("gemini")
+        
+        # Always add ollama as fallback (local, no API key needed)
+        available_providers.append("ollama")
+        
+        # If no API keys provided, use basic fallback order
+        if not available_providers:
+            available_providers = ["mistral", "binarybrained", "ollama"]
+            
+        self.llm_providers: List[str] = available_providers
         
         # System Settings
         self.max_concurrent_agents: int = int(os.getenv('MAX_CONCURRENT_AGENTS', '3'))
-        self.default_model: str = os.getenv('DEFAULT_MODEL', "llama3-8b-8192")  # Default to BinaryBrained model
+        self.default_model: str = os.getenv('DEFAULT_MODEL', "llama-3.3-70b-versatile")  # Updated to supported Groq model
         self.log_level: str = os.getenv('LOG_LEVEL', "INFO")
         # Agent Settings
         self.agent_timeout: int = int(os.getenv('AGENT_TIMEOUT', '300'))
