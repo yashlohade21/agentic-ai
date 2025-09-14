@@ -1,5 +1,5 @@
 from flask import Flask, session, jsonify, request
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.media import media_bp
@@ -52,37 +52,27 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
-    # Enhanced CORS configuration
-    CORS(app,
-        origins=[
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'http://localhost:5000',
-            'http://localhost:8000',
-            'https://localhost:8000',
-            'https://ai-agent-with-frontend.onrender.com',
-            'https://ai-agent-zeta-bice.vercel.app',
-            'https://*.vercel.app'  # Allow all Vercel deployments
-        ],
-        allow_headers=['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept', 'Origin'],
-        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-        supports_credentials=True,
-        expose_headers=['Set-Cookie', 'Content-Range', 'X-Content-Range'],
-        max_age=3600
-    )
+    # Simple and permissive CORS configuration for production
+    CORS(app, resources={r"/*": {
+        "origins": "*",
+        "allow_headers": "*",
+        "expose_headers": "*",
+        "supports_credentials": True,
+        "methods": "*"
+    }})
 
-    # Add explicit OPTIONS handler for all routes
+    # Add explicit CORS headers to every response
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
-        # Allow requests from Vercel deployments
-        if origin and ('vercel.app' in origin or 'localhost' in origin or '127.0.0.1' in origin or 'onrender.com' in origin):
+        if origin:
             response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie, X-Requested-With, Accept, Origin'
+        else:
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
+        response.headers['Access-Control-Max-Age'] = '3600'
         return response
     
     # Register blueprints
@@ -95,8 +85,9 @@ def create_app():
     
     # Health check endpoint
     @app.route('/api/health')
+    @cross_origin()
     def health_check():
-        return {
+        return jsonify({
             'status': 'ok',
             'message': 'AI Agent API is running',
             'version': '2.0.0',
@@ -109,7 +100,7 @@ def create_app():
             ],
             'cors_enabled': True,
             'environment': os.getenv('FLASK_ENV', 'development')
-        }
+        })
 
     # Simple ping endpoint for basic health check
     @app.route('/ping')
