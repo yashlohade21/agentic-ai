@@ -6,19 +6,6 @@ const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-
-  // If running on localhost, use local backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:5000';
-  }
-
-  // If running on Vercel, use Render backend
-  if (window.location.hostname.includes('vercel.app')) {
-    return 'https://ai-agent-with-frontend.onrender.com';
-  }
-
-  // Default to production backend
-  return 'https://ai-agent-with-frontend.onrender.com';
 };
 
 const API_BASE_URL = getApiUrl();
