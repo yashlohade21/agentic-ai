@@ -42,9 +42,13 @@ def validate_password(password):
         return False, "Password must contain at least one number"
     return True, "Password is valid"
 
-@auth_bp.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST', 'OPTIONS'])
 def register():
     """Register a new user"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+
     try:
         data = request.get_json()
         
@@ -121,9 +125,13 @@ def register():
     except Exception as e:
         return jsonify({'error': f'Registration failed: {str(e)}'}), 500
 
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST', 'OPTIONS'])
 def login():
     """Login user"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+
     try:
         data = request.get_json()
         
@@ -169,9 +177,13 @@ def login():
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['POST', 'OPTIONS'])
 def logout():
     """Logout user"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+
     try:
         # Clear session data
         session.clear()
@@ -210,9 +222,13 @@ def logout():
 def debug_session():
     return jsonify(dict(session)), 200
 
-@auth_bp.route('/check-auth', methods=['GET'])
+@auth_bp.route('/check-auth', methods=['GET', 'OPTIONS'])
 def check_auth():
     """Super fast auth check with caching and optimized session handling"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+
     try:
         if 'user_id' not in session:
             return jsonify({'authenticated': False, 'reason': 'no_session'}), 200
