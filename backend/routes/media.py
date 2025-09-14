@@ -5,7 +5,13 @@ from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 import uuid
 from datetime import datetime
-from PIL import Image
+# from PIL import Image  # Commented for deployment
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    Image = None
 import mimetypes
 from routes.auth import require_auth
 
@@ -63,7 +69,7 @@ def get_file_info(file_path):
         }
         
         # Additional info for images
-        if mime_type and mime_type.startswith('image/'):
+        if mime_type and mime_type.startswith('image/') and PIL_AVAILABLE:
             try:
                 with Image.open(file_path) as img:
                     file_info.update({
@@ -94,21 +100,25 @@ def format_file_size(size_bytes):
 
 def process_image(file_path, max_width=1920, max_height=1080, quality=85):
     """Process and optimize uploaded images"""
+    if not PIL_AVAILABLE:
+        logger.warning("PIL not available, skipping image processing")
+        return
+
     try:
         with Image.open(file_path) as img:
             # Convert to RGB if necessary
             if img.mode in ('RGBA', 'LA', 'P'):
                 img = img.convert('RGB')
-            
+
             # Resize if too large
             if img.width > max_width or img.height > max_height:
                 img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
                 logger.info(f"Resized image to {img.width}x{img.height}")
-            
+
             # Save optimized version
             img.save(file_path, 'JPEG', quality=quality, optimize=True)
             logger.info(f"Optimized image saved: {file_path}")
-            
+
     except Exception as e:
         logger.error(f"Error processing image {file_path}: {e}")
 
@@ -309,7 +319,7 @@ def analyze_media():
         analysis = {'file_type': file_type, 'analysis': {}}
         
         # Basic analysis based on file type
-        if file_type == 'images':
+        if file_type == 'images' and PIL_AVAILABLE:
             try:
                 with Image.open(file_path) as img:
                     analysis['analysis'] = {
@@ -321,6 +331,8 @@ def analyze_media():
                     }
             except Exception as e:
                 analysis['analysis']['error'] = f"Could not analyze image: {e}"
+        elif file_type == 'images' and not PIL_AVAILABLE:
+            analysis['analysis']['error'] = "Image analysis not available (PIL not installed)"
         
         elif file_type == 'documents':
             # Basic document analysis

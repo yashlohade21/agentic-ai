@@ -1,5 +1,13 @@
 from flask import Blueprint, request, jsonify, session
-from firebase_config import get_firestore_client
+# from firebase_config import get_firestore_client
+try:
+    from firebase_config import get_firestore_client
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    FIREBASE_AVAILABLE = False
+    def get_firestore_client():
+        return None
+
 from datetime import datetime
 import uuid
 import logging

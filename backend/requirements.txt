@@ -1,5 +1,13 @@
+# Core Flask dependencies
 Flask==2.3.3
 flask-cors==4.0.0
 gunicorn==21.2.0
 Werkzeug==2.3.7
+
+# HTTP and utilities
 requests==2.31.0
+
+# Optional dependencies (commented out to avoid build issues)
+# Pillow==10.1.0
+# firebase-admin==6.4.0
+# pydantic==2.5.0
