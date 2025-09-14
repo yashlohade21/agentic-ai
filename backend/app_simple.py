@@ -11,16 +11,21 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-12345')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 
-# Simple CORS setup - THIS WILL FIX THE CORS ERROR
+# Enhanced CORS setup - Fixed to handle all domains properly
 CORS(app,
      origins=[
          'http://localhost:3000',
          'http://localhost:5173',
-         'https://ai-agent-zeta-bice.vercel.app'
+         'http://127.0.0.1:3000',
+         'http://127.0.0.1:5173',
+         'https://ai-agent-zeta-bice.vercel.app',
+         'https://ai-agent-with-frontend.onrender.com'
      ],
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Authorization'],
-     supports_credentials=True
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+     allow_headers=['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept', 'Origin'],
+     supports_credentials=True,
+     expose_headers=['Set-Cookie', 'Content-Range', 'X-Content-Range'],
+     max_age=3600
 )
 
 # Configure logging
