@@ -4,5 +4,3 @@ gunicorn==21.2.0
 Werkzeug==2.3.7
 python-dotenv==1.0.0
 requests==2.31.0
-firebase-admin==6.2.0
-cachetools==5.3.1

@@ -144,6 +144,8 @@ def create_app():
     except Exception as e:
         logging.error(f"Initialization error (non-fatal): {e}")
         # Continue anyway - the app can still serve basic endpoints
+        # Set a global flag to indicate limited functionality
+        app.config['LIMITED_MODE'] = True
 
     return app
 
@@ -164,7 +166,7 @@ def initialize_llm_manager():
     try:
         global llm_manager
         # Only initialize if API keys are present
-        if os.getenv('GROQ_API_KEY') or os.getenv('GOOGLE_API_KEY'):
+        if os.getenv('GROQ_API_KEY') or os.getenv('GOOGLE_API_KEY') or os.getenv('BINARYBRAINED_API_KEY'):
             llm_manager = create_llm_manager(settings)
             logging.info("LLM manager initialized successfully")
 
