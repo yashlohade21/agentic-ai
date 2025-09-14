@@ -1,2 +1,32 @@
 Flask==2.3.3
+flask-cors==4.0.0
 gunicorn==21.2.0
+
+# Core dependencies
+Werkzeug==2.3.7
+pydantic==2.5.0
+
+# AI/ML dependencies
+numpy==1.24.3
+torch==2.1.0
+tensorflow==2.15.0
+transformers==4.35.0
+
+# Image processing
+Pillow==10.1.0
+opencv-python==4.8.1.78
+
+# PDF processing
+PyPDF2==3.0.1
+PyMuPDF==1.23.7
+
+# HTTP and async
+requests==2.31.0
+aiohttp==3.9.1
+aiofiles==23.2.0
+
+# Firebase
+firebase-admin==6.4.0
+
+# Database (if used)
+sqlalchemy==2.0.23
