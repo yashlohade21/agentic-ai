@@ -6,7 +6,21 @@ try:
     from firebase_config import db
 except:
     from firebase_config_mock import db
-from main import BinarybrainedSystem  # Import your actual AI system
+# from main import BinarybrainedSystem  # Import your actual AI system
+
+# Minimal BinarybrainedSystem for deployment
+class BinarybrainedSystem:
+    def __init__(self):
+        pass
+
+    async def initialize(self):
+        pass
+
+    async def process_request(self, message):
+        return {
+            "response": f"Echo: {message}",
+            "metadata": {"status": "minimal_mode"}
+        }
 from routes.auth import require_auth
 
 # Configure logging
