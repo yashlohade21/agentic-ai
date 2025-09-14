@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
 
 app = Flask(__name__)
@@ -21,6 +21,18 @@ CORS(app, resources={r"/*": {
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
 }})
 
+# Add explicit OPTIONS handler for all API routes
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+        response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS,PATCH")
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Max-Age', '86400')
+        return response
+
 @app.route('/')
 def index():
     return jsonify({
@@ -38,7 +50,8 @@ def health():
         'environment': os.getenv('FLASK_ENV', 'development')
     })
 
-@app.route('/api/auth/check-auth', methods=['GET'])
+@app.route('/api/auth/check-auth', methods=['GET', 'OPTIONS'])
+@cross_origin()
 def check_auth():
     return jsonify({
         'authenticated': False,
