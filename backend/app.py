@@ -52,52 +52,25 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
-    # Enhanced CORS configuration with wildcard for Vercel deployments
-    allowed_origins = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'https://ai-agent-with-frontend.onrender.com',
-        'https://ai-agent-zeta-bice.vercel.app',
-        'https://*.vercel.app'  # Allow all Vercel preview deployments
-    ]
-
+    # Enhanced CORS configuration
     CORS(app,
-        resources={
-            r"/api/*": {
-                "origins": allowed_origins,
-                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-                "allow_headers": ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "Accept", "Origin"],
-                "supports_credentials": True,
-                "expose_headers": ["Set-Cookie", "Content-Range", "X-Content-Range"],
-                "max_age": 3600
-            }
-        },
-        send_wildcard=False,
-        always_send=True
+        origins=[
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:5000',
+            'http://localhost:8000',
+            'https://localhost:8000',
+            'https://ai-agent-with-frontend.onrender.com',
+            'https://ai-agent-zeta-bice.vercel.app'
+        ],
+        allow_headers=['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept', 'Origin'],
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        supports_credentials=True,
+        expose_headers=['Set-Cookie', 'Content-Range', 'X-Content-Range'],
+        max_age=3600
     )
-
-    # Additional OPTIONS handler for preflight requests
-    @app.before_request
-    def handle_preflight():
-        if request.method == "OPTIONS":
-            response = jsonify({'status': 'ok'})
-            response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With, Accept, Origin')
-            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Max-Age', '3600')
-            return response, 200
-
-    # After request handler to ensure CORS headers are always present
-    @app.after_request
-    def after_request(response):
-        origin = request.headers.get('Origin')
-        if origin in allowed_origins or (origin and origin.endswith('.vercel.app')):
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -111,7 +84,7 @@ def create_app():
     @app.route('/api/health')
     def health_check():
         return {
-            'status': 'ok', 
+            'status': 'ok',
             'message': 'AI Agent API is running',
             'version': '2.0.0',
             'features': [
@@ -120,8 +93,15 @@ def create_app():
                 'chat_history',
                 'deep_learning',
                 'improved_ui'
-            ]
+            ],
+            'cors_enabled': True,
+            'environment': os.getenv('FLASK_ENV', 'development')
         }
+
+    # Simple ping endpoint for basic health check
+    @app.route('/ping')
+    def ping():
+        return 'pong', 200
     
     @app.route('/')
     def root():
@@ -149,33 +129,52 @@ def create_app():
     def internal_error(e):
         return {'error': 'Internal server error'}, 500
     
-    # Initialize models and LLM manager on startup
-    with app.app_context():
-        initialize_models()
-        initialize_llm_manager()
+    # Initialize models and LLM manager on startup with error handling
+    try:
+        with app.app_context():
+            initialize_models()
+            initialize_llm_manager()
+    except Exception as e:
+        logging.error(f"Initialization error (non-fatal): {e}")
+        # Continue anyway - the app can still serve basic endpoints
 
     return app
 
 def initialize_models():
     """Initialize deep learning models on application startup"""
     try:
-        logging.info("Model initialization completed")
+        # Skip heavy model initialization in production to avoid memory issues
+        if os.getenv('FLASK_ENV') != 'production':
+            logging.info("Model initialization skipped in production")
+        else:
+            logging.info("Model initialization completed")
     except Exception as e:
         logging.error(f"Failed to initialize models: {str(e)}")
+        # Don't fail the app startup
 
 def initialize_llm_manager():
     """Initialize LLM manager with improved error handling"""
     try:
         global llm_manager
-        llm_manager = create_llm_manager(settings)
-        logging.info("LLM manager initialized successfully")
-        
-        # Test the LLM manager
-        status = llm_manager.get_status()
-        logging.info(f"LLM Manager Status: {status}")
-        
+        # Only initialize if API keys are present
+        if os.getenv('GROQ_API_KEY') or os.getenv('GOOGLE_API_KEY'):
+            llm_manager = create_llm_manager(settings)
+            logging.info("LLM manager initialized successfully")
+
+            # Test the LLM manager
+            try:
+                status = llm_manager.get_status()
+                logging.info(f"LLM Manager Status: {status}")
+            except:
+                logging.warning("LLM manager status check failed, but continuing")
+        else:
+            logging.warning("No API keys found, LLM manager not initialized")
+            llm_manager = None
+
     except Exception as e:
         logging.error(f"Failed to initialize LLM manager: {str(e)}")
+        llm_manager = None
+        # Don't fail the app startup
 
 # Create the app instance for imports
 app = create_app()

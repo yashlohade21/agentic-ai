@@ -1,7 +1,28 @@
 import axios from 'axios';
 
-// Always use local backend for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Determine the API URL based on environment
+const getApiUrl = () => {
+  // If VITE_API_URL is set, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // If running on localhost, use local backend
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+
+  // If running on Vercel, use Render backend
+  if (window.location.hostname.includes('vercel.app')) {
+    return 'https://ai-agent-with-frontend.onrender.com';
+  }
+
+  // Default to production backend
+  return 'https://ai-agent-with-frontend.onrender.com';
+};
+
+const API_BASE_URL = getApiUrl();
+console.log('Using API URL:', API_BASE_URL);
       
 // Create optimized axios instance with dynamic timeout and retry logic
 const api = axios.create({

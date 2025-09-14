@@ -692,14 +692,22 @@
 
 /* Loading Screen */
 .loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
   background: #f7f7f8;
+  z-index: 10000;
 }
 
-.modern-app.dark .loading-screen {
+.modern-app.dark .loading-screen,
+.theme-dark .loading-screen {
   background: #202123;
 }
 
@@ -707,35 +715,49 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
+  gap: 20px;
   text-align: center;
+  padding: 2rem;
+}
+
+.loading-content > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667eea;
 }
 
 .loading-content h2 {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 600;
   color: #202123;
+  margin: 0;
 }
 
-.modern-app.dark .loading-content h2 {
+.modern-app.dark .loading-content h2,
+.theme-dark .loading-content h2 {
   color: #ececf1;
 }
 
 .loading-content p {
   font-size: 16px;
   color: #8e8ea0;
+  margin: 0;
 }
 
 .loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #e5e5e5;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e5e5;
   border-top-color: #667eea;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-top: 12px;
 }
 
-.modern-app.dark .loading-spinner {
+.modern-app.dark .loading-spinner,
+.theme-dark .loading-spinner {
   border-color: #444654;
   border-top-color: #667eea;
 }

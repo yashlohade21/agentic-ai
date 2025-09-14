@@ -394,29 +394,40 @@ function App() {
   // Professional loading screen
   if (authLoading) {
     return (
-      <div className="loading-screen">
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: darkMode ? '#1e293b' : '#ffffff',
-              color: darkMode ? '#e2e8f0' : '#334155',
-              border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
-              borderRadius: '8px',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            },
-          }}
-        />
-        <div className="loading-content">
-          <div className="mb-8">
-            <Bot size={48} />
+      <>
+        <style>{`
+          body, html, #root {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+          }
+        `}</style>
+        <div className="loading-screen">
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: darkMode ? '#1e293b' : '#ffffff',
+                color: darkMode ? '#e2e8f0' : '#334155',
+                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              },
+            }}
+          />
+          <div className="loading-content">
+            <div style={{ marginBottom: '20px' }}>
+              <Bot size={48} color="#667eea" />
+            </div>
+            <h2>AI Business Assistant</h2>
+            <p>Loading application...</p>
+            <div className="loading-spinner" />
           </div>
-          <h2>AI Business Assistant</h2>
-          <p>Loading application...</p>
-          <div className="loading-spinner" />
         </div>
-      </div>
+      </>
     );
   }
 

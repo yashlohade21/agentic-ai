@@ -1,111 +1,53 @@
-uuid
-google-generativeai
-aiofiles
-aiohappyeyeballs
-aiosignal
-annotated-types
-anyio
-attrs
-beautifulsoup4
-blinker
-cachetools
-certifi
-charset-normalizer
-click
-coverage
-dataclasses-json
-distro
-filetype
-Flask
-flask-cors
-frozenlist
-google-ai-generativelanguage
-google-api-core
-google-auth
-googleapis-common-protos
-greenlet
-groq
-grpcio
-grpcio-status
-h11
-httpcore
-httpx
-httpx-sse
-idna
-iniconfig
-itsdangerous
-Jinja2
-jsonpatch
-jsonpointer
-langchain
-langchain-community
-langchain-core
-langchain-google-genai
-langchain-groq
-langchain-ollama
-langchain-text-splitters
-langsmith
-MarkupSafe
-marshmallow
-multidict
-mypy_extensions
-numpy
-ollama
-orjson
-packaging
-pathlib2
-pluggy
-propcache
-proto-plus
-protobuf
-pyasn1
-pyasn1_modules
-pydantic
-pydantic-settings
-pydantic_core
-Pygments
-pytest
-pytest-asyncio
-pytest-cov
-python-dotenv
-PyYAML
-requests
-requests-toolbelt
-rsa
-six
-sniffio
-soupsieve
-structlog
-tenacity
-typing-inspect
-typing-inspection
-typing_extensions
-urllib3
-Werkzeug
-wikipedia
-yarl
-zstandard
-firebase-admin
-gunicorn
+# Core dependencies
+Flask==3.0.0
+flask-cors==4.0.0
+gunicorn==21.2.0
+python-dotenv==1.0.0
 
-# Media processing
-Pillow
-PyPDF2
-PyMuPDF
-pytesseract
+# Authentication & Security
+firebase-admin==6.1.0
+PyJWT==2.8.0
+passlib==1.7.4
+bcrypt==4.1.2
+python-jose[cryptography]==3.3.0
 
-# ML libraries
-tensorflow
-# OR tensorflow-cpu
-torch
-torchvision
+# AI/ML - Langchain
+langchain==0.1.0
+langchain-community==0.0.10
+langchain-core==0.1.10
+langchain-google-genai==0.0.6
+langchain-groq==0.0.1
+langsmith==0.0.77
 
-# NLP & Transformers
-transformers
-tokenizers
+# AI Models APIs
+google-generativeai==0.3.2
+groq==0.4.1
+openai==1.6.1
 
-# Computer Vision
-opencv-python
+# Data processing
+numpy==1.24.3
+pandas==2.0.3
+Pillow==10.1.0
+PyPDF2==3.0.1
 
-# Optional Scientific
-scikit-learn
+# HTTP & Async
+aiofiles==23.2.1
+httpx==0.25.2
+requests==2.31.0
+urllib3==2.1.0
+
+# Utils
+beautifulsoup4==4.12.2
+wikipedia-api==0.6.0
+structlog==23.2.0
+pydantic==2.5.2
+pydantic-settings==2.1.0
+typing-extensions==4.9.0
+
+# Database
+pymongo==4.6.1
+
+# Development tools (optional, can be removed for production)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
