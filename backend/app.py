@@ -52,28 +52,24 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
-    # Simple and permissive CORS configuration for production
+    # CORS configuration with specific frontend domains
+    allowed_origins = [
+        "https://ai-agent-zeta-bice.vercel.app",  # Production frontend
+        "http://localhost:3000",  # Local development
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173"
+    ]
+    
     CORS(app, resources={r"/*": {
-        "origins": "*",
-        "allow_headers": "*",
-        "expose_headers": "*",
+        "origins": allowed_origins,
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+        "expose_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True,
-        "methods": "*"
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
     }})
 
-    # Add explicit CORS headers to every response
-    @app.after_request
-    def after_request(response):
-        origin = request.headers.get('Origin')
-        if origin:
-            response.headers['Access-Control-Allow-Origin'] = origin
-        else:
-            response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
-        response.headers['Access-Control-Max-Age'] = '3600'
-        return response
+
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -83,6 +79,7 @@ def create_app():
     app.register_blueprint(chats_bp)
     app.register_blueprint(dl_bp)
     
+
     # Health check endpoint
     @app.route('/api/health')
     @cross_origin()
@@ -190,4 +187,6 @@ def initialize_llm_manager():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug)

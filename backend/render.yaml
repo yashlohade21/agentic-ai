@@ -1,11 +1,15 @@
 services:
   - type: web
     name: ai-agent-backend
-    runtime: python3
-    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
-    startCommand: "gunicorn app_simple:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-level info"
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    healthCheckPath: /api/health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.0
-      - key: SECRET_KEY
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONPATH
+        value: .
+      - key: PORT
         generateValue: true

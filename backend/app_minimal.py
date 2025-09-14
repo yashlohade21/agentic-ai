@@ -13,28 +13,24 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 
-# Very permissive CORS for debugging
+# CORS configuration with specific frontend domains
+allowed_origins = [
+    "https://ai-agent-zeta-bice.vercel.app",  # Production frontend
+    "http://localhost:3000",  # Local development
+    "http://localhost:5173",  # Vite dev server
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173"
+]
+
 CORS(app, resources={r"/*": {
-    "origins": "*",
-    "allow_headers": "*",
-    "expose_headers": "*",
+    "origins": allowed_origins,
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    "expose_headers": ["Content-Type", "Authorization"],
     "supports_credentials": True,
-    "methods": "*"
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
 }})
 
-# Add CORS headers to every response
-@app.after_request
-def after_request(response):
-    origin = request.headers.get('Origin')
-    if origin:
-        response.headers['Access-Control-Allow-Origin'] = origin
-    else:
-        response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
-    response.headers['Access-Control-Max-Age'] = '3600'
-    return response
+
 
 # Mock user storage
 users_db = {}
