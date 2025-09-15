@@ -1,6 +1,5 @@
 from functools import wraps
 from flask import Blueprint, request, jsonify, session
-from flask_cors import cross_origin
 import logging
 import os
 from werkzeug.security import generate_password_hash, check_password_hash

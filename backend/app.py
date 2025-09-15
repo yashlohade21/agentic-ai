@@ -1,5 +1,4 @@
 from flask import Flask, session, jsonify, request
-from flask_cors import CORS, cross_origin
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.media import media_bp
