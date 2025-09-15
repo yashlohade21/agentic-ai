@@ -82,14 +82,14 @@ def create_app():
 
             # Only allow credentials for allowed origins
             if origin in allowed_origins:
-                response.headers.add("Access-Control-Allow-Origin", origin)
-                response.headers.add('Access-Control-Allow-Credentials', 'true')
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
             else:
-                response.headers.add("Access-Control-Allow-Origin", origin or '*')
+                response.headers['Access-Control-Allow-Origin'] = origin or '*'
 
-            response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With,Accept,Origin")
-            response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS,PATCH")
-            response.headers.add('Access-Control-Max-Age', '86400')
+            response.headers['Access-Control-Allow-Headers'] = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+            response.headers['Access-Control-Allow-Methods'] = "GET,PUT,POST,DELETE,OPTIONS,PATCH"
+            response.headers['Access-Control-Max-Age'] = '86400'
             return response
 
     # Add CORS headers to all responses
@@ -97,12 +97,12 @@ def create_app():
     def after_request(response):
         origin = request.headers.get('Origin')
 
-        # Add CORS headers to all responses if origin is allowed
-        if origin in allowed_origins:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
+        # Only add CORS headers if they haven't been added already (e.g., by preflight handler)
+        if origin in allowed_origins and 'Access-Control-Allow-Origin' not in response.headers:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With,Accept,Origin'
+            response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS,PATCH'
 
         return response
 
