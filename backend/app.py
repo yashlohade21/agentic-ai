@@ -84,11 +84,18 @@ def create_app():
     @app.before_request
     def handle_preflight():
         if request.method == "OPTIONS":
+            origin = request.headers.get('Origin')
             response = jsonify({})
-            response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
+
+            # Only allow credentials for allowed origins
+            if origin in allowed_origins:
+                response.headers.add("Access-Control-Allow-Origin", origin)
+                response.headers.add('Access-Control-Allow-Credentials', 'true')
+            else:
+                response.headers.add("Access-Control-Allow-Origin", origin or '*')
+
             response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With,Accept,Origin")
             response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS,PATCH")
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
             response.headers.add('Access-Control-Max-Age', '86400')
             return response
 
