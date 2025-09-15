@@ -125,7 +125,11 @@ const MessageRenderer = ({ message }) => {
             components={{
               code({ node, inline, className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || '');
-                const codeString = String(children).replace(/\n$/, '');
+                // Ensure proper handling of code content
+                const rawChildren = children || '';
+                const codeString = Array.isArray(rawChildren)
+                  ? rawChildren.join('')
+                  : String(rawChildren).replace(/\n$/, '');
 
                 // Handle both specified language and unspecified code blocks
                 if (!inline && (match || codeString.includes('\n'))) {
@@ -272,33 +276,35 @@ const MessageRenderer = ({ message }) => {
                             margin: 0,
                             padding: '20px',
                             background: isDark ? '#0d1117' : '#f6f8fa',
-                            fontSize: '13px',
-                            lineHeight: '1.45',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
                             fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
                             borderRadius: '0',
                             border: 'none',
                             overflow: 'auto',
-                            whiteSpace: 'pre',
+                            whiteSpace: 'pre-wrap',
                             wordSpacing: 'normal',
-                            wordBreak: 'normal',
-                            wordWrap: 'normal',
-                            tabSize: 2,
+                            wordBreak: 'keep-all',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            tabSize: 4,
                             WebkitHyphens: 'none',
                             MozHyphens: 'none',
                             msHyphens: 'none',
                             hyphens: 'none',
-                            fontVariantLigatures: 'common-ligatures'
+                            fontVariantLigatures: 'none'
                           }}
                           codeTagProps={{
                             style: {
                               fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
-                              fontSize: '13px',
-                              lineHeight: '1.45',
-                              whiteSpace: 'pre',
+                              fontSize: '14px',
+                              lineHeight: '1.6',
+                              whiteSpace: 'pre-wrap',
                               wordSpacing: 'normal',
-                              wordBreak: 'normal',
-                              wordWrap: 'normal',
-                              tabSize: 2,
+                              wordBreak: 'keep-all',
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word',
+                              tabSize: 4,
                               WebkitHyphens: 'none',
                               MozHyphens: 'none',
                               msHyphens: 'none',
@@ -307,8 +313,8 @@ const MessageRenderer = ({ message }) => {
                               overflow: 'visible'
                             }
                           }}
-                          wrapLines={false}
-                          wrapLongLines={false}
+                          wrapLines={true}
+                          wrapLongLines={true}
                           {...props}
                         >
                           {codeString}
