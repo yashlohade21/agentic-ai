@@ -4,19 +4,19 @@
 .message-content .code-block-wrapper pre[class*="language-"],
 .message-content .code-block-wrapper pre,
 .message-content .code-block-wrapper code {
-  white-space: pre !important;
-  word-spacing: normal !important;
-  word-break: normal !important;
-  word-wrap: normal !important;
-  line-height: 1.45 !important;
-  tab-size: 2 !important;
-  -moz-tab-size: 2 !important;
-  hyphens: none !important;
-  -webkit-hyphens: none !important;
-  -moz-hyphens: none !important;
-  -ms-hyphens: none !important;
-  font-variant-ligatures: common-ligatures !important;
-  font-feature-settings: "liga" 1, "calt" 1 !important;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.6;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  hyphens: none;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  font-variant-ligatures: none;
+  overflow-x: auto;
 }
 
 /* Ensure proper code formatting */
@@ -244,21 +244,21 @@
 .message-content .code-block-wrapper pre,
 .message-content .code-block-wrapper code {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
-  font-variant-ligatures: common-ligatures;
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-variant-ligatures: none;
   direction: ltr;
   text-align: left;
   white-space: pre;
   word-spacing: normal;
   word-break: normal;
   word-wrap: normal;
-  line-height: 1.45;
-  tab-size: 2;
-  -moz-tab-size: 2;
+  line-height: 1.6;
+  tab-size: 4;
+  -moz-tab-size: 4;
   hyphens: none;
   -webkit-hyphens: none;
   -moz-hyphens: none;
   -ms-hyphens: none;
+  overflow-x: auto;
 }
 
 /* Fix any text rendering issues */

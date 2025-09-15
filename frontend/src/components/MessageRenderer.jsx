@@ -125,11 +125,26 @@ const MessageRenderer = ({ message }) => {
             components={{
               code({ node, inline, className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || '');
-                // Ensure proper handling of code content
-                const rawChildren = children || '';
-                const codeString = Array.isArray(rawChildren)
-                  ? rawChildren.join('')
-                  : String(rawChildren).replace(/\n$/, '');
+                // Fix for code content parsing
+                let codeString = '';
+
+                // Handle different types of children from ReactMarkdown
+                if (typeof children === 'string') {
+                  codeString = children;
+                } else if (Array.isArray(children)) {
+                  codeString = children.map(child => {
+                    if (typeof child === 'string') return child;
+                    if (child?.props?.children) return child.props.children;
+                    return '';
+                  }).join('');
+                } else if (children?.props?.children) {
+                  codeString = String(children.props.children);
+                } else {
+                  codeString = String(children || '');
+                }
+
+                // Clean up the code string
+                codeString = codeString.replace(/\n$/, '');
 
                 // Handle both specified language and unspecified code blocks
                 if (!inline && (match || codeString.includes('\n'))) {
@@ -282,11 +297,11 @@ const MessageRenderer = ({ message }) => {
                             borderRadius: '0',
                             border: 'none',
                             overflow: 'auto',
-                            whiteSpace: 'pre-wrap',
+                            whiteSpace: 'pre',
                             wordSpacing: 'normal',
-                            wordBreak: 'keep-all',
-                            wordWrap: 'break-word',
-                            overflowWrap: 'break-word',
+                            wordBreak: 'normal',
+                            wordWrap: 'normal',
+                            overflowWrap: 'normal',
                             tabSize: 4,
                             WebkitHyphens: 'none',
                             MozHyphens: 'none',
@@ -299,7 +314,7 @@ const MessageRenderer = ({ message }) => {
                               fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
                               fontSize: '14px',
                               lineHeight: '1.6',
-                              whiteSpace: 'pre-wrap',
+                              whiteSpace: 'pre',
                               wordSpacing: 'normal',
                               wordBreak: 'keep-all',
                               wordWrap: 'break-word',
@@ -313,8 +328,8 @@ const MessageRenderer = ({ message }) => {
                               overflow: 'visible'
                             }
                           }}
-                          wrapLines={true}
-                          wrapLongLines={true}
+                          wrapLines={false}
+                          wrapLongLines={false}
                           {...props}
                         >
                           {codeString}
