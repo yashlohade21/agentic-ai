@@ -83,20 +83,23 @@ class LLMProvider(ABC):
 
 class BinaryBrainedProvider(LLMProvider):
     """BinaryBrained/Groq provider with improved error handling"""
-    
-    def __init__(self, api_key: str = None, model_name: str = "llama3-8b-8192", **kwargs):
+
+    def __init__(self, api_key: str = None, model_name: str = "llama-3.3-70b-versatile", **kwargs):
         super().__init__("binarybrained", **kwargs)
         self.api_key = api_key
+        # Use llama-3.3-70b-versatile as the default model (currently available on Groq)
         self.model_name = model_name
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         } if api_key else {}
-        
+
         if not api_key:
             self.available = False
             logger.warning("BinaryBrained API key not provided")
+        else:
+            logger.info(f"BinaryBrained provider initialized with model: {self.model_name}")
     
     async def generate(self, prompt: str, system_prompt: str = None) -> str:
         if not self.available or not self.api_key:
@@ -131,14 +134,25 @@ class BinaryBrainedProvider(LLMProvider):
                 result = response.json()
                 if 'choices' in result and len(result['choices']) > 0:
                     self.reset_errors()
-                    return result['choices'][0]['message']['content']
+                    content = result['choices'][0]['message']['content']
+                    logger.info(f"BinaryBrained successfully generated response (length: {len(content)})")
+                    return content
                 else:
                     raise Exception(f"Invalid response format: {result}")
+            elif response.status_code == 401:
+                self.mark_error("auth")
+                raise Exception(f"Authentication failed - check your BINARYBRAINED_API_KEY")
+            elif response.status_code == 429:
+                self.mark_error("rate_limit")
+                raise Exception(f"Rate limit exceeded - please try again later")
             else:
-                raise Exception(f"API error: {response.status_code} - {response.text}")
-                
+                error_detail = response.text[:500] if response.text else "No error details"
+                raise Exception(f"API error: {response.status_code} - {error_detail}")
+
         except Exception as e:
-            self.mark_error()
+            if "Authentication failed" not in str(e):
+                self.mark_error()
+            logger.error(f"BinaryBrained generation failed: {e}")
             raise Exception(f"BinaryBrained generation failed: {e}")
     
     def _make_request(self, payload):
@@ -280,6 +294,86 @@ class OpenAIProvider(LLMProvider):
             timeout=25
         )
 
+class MistralProvider(LLMProvider):
+    """Mistral AI provider"""
+
+    def __init__(self, api_key: str = None, model_name: str = "mistral-small-latest", **kwargs):
+        super().__init__("mistral", **kwargs)
+        self.api_key = api_key
+        self.model_name = model_name
+        self.api_url = "https://api.mistral.ai/v1/chat/completions"
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        } if api_key else {}
+
+        if not api_key:
+            self.available = False
+            logger.warning("Mistral API key not provided")
+        else:
+            logger.info(f"Mistral provider initialized with model: {self.model_name}")
+
+    async def generate(self, prompt: str, system_prompt: str = None) -> str:
+        if not self.available or not self.api_key:
+            raise Exception("Mistral provider not available or API key missing")
+
+        try:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 2048
+            }
+
+            with ThreadPoolExecutor() as executor:
+                future = executor.submit(self._make_request, payload)
+                try:
+                    response = await asyncio.wait_for(
+                        asyncio.wrap_future(future),
+                        timeout=30.0
+                    )
+                except asyncio.TimeoutError:
+                    raise Exception("Request timeout after 30 seconds")
+
+            if response.status_code == 200:
+                result = response.json()
+                if 'choices' in result and len(result['choices']) > 0:
+                    self.reset_errors()
+                    content = result['choices'][0]['message']['content']
+                    logger.info(f"Mistral successfully generated response (length: {len(content)})")
+                    return content
+                else:
+                    raise Exception(f"Invalid response format: {result}")
+            elif response.status_code == 401:
+                self.mark_error("auth")
+                raise Exception(f"Authentication failed - check your MISTRAL_API_KEY")
+            elif response.status_code == 429:
+                self.mark_error("rate_limit")
+                raise Exception(f"Rate limit exceeded - please try again later")
+            else:
+                error_detail = response.text[:500] if response.text else "No error details"
+                raise Exception(f"API error: {response.status_code} - {error_detail}")
+
+        except Exception as e:
+            if "Authentication failed" not in str(e):
+                self.mark_error()
+            logger.error(f"Mistral generation failed: {e}")
+            raise Exception(f"Mistral generation failed: {e}")
+
+    def _make_request(self, payload):
+        """Make the actual HTTP request"""
+        return requests.post(
+            self.api_url,
+            headers=self.headers,
+            json=payload,
+            timeout=25
+        )
+
 class LocalLLMProvider(LLMProvider):
     """Local LLM provider for offline fallback"""
     
@@ -405,30 +499,44 @@ class LLMManager:
 def create_llm_manager(config) -> LLMManager:
     """Factory function to create LLM manager with configured providers"""
     providers = []
-    
-    # Add BinaryBrained/Groq provider (highest priority)
+
+    # Add Mistral provider (fast and reliable)
+    if config.mistral_api_key:
+        providers.append(MistralProvider(
+            api_key=config.mistral_api_key,
+            model_name="mistral-small-latest"
+        ))
+        logger.info(f"Added Mistral provider with API key: {config.mistral_api_key[:10]}...")
+
+    # Add BinaryBrained/Groq provider (high quality)
     if config.binarybrained_api_key:
         providers.append(BinaryBrainedProvider(
             api_key=config.binarybrained_api_key,
-            model_name="llama3-8b-8192"
+            model_name="llama-3.3-70b-versatile"  # Updated to current Groq model
         ))
-    
+        logger.info(f"Added BinaryBrained provider with API key: {config.binarybrained_api_key[:10]}...")
+
     # Add OpenAI provider
     if config.openai_api_key:
         providers.append(OpenAIProvider(
             api_key=config.openai_api_key,
             model_name="gpt-3.5-turbo"
         ))
-    
+        logger.info(f"Added OpenAI provider")
+
     # Add HuggingFace provider
     if config.huggingface_api_token:
         providers.append(HuggingFaceProvider(
             api_token=config.huggingface_api_token,
             model_name="microsoft/DialoGPT-medium"
         ))
-    
-    # Always add local provider as fallback
-    providers.append(LocalLLMProvider())
-    
+        logger.info(f"Added HuggingFace provider")
+
+    # Only add local provider if no other providers are available
+    if not providers:
+        logger.warning("No API providers available, using local fallback only")
+        providers.append(LocalLLMProvider())
+
+    logger.info(f"LLM Manager created with {len(providers)} providers: {[p.name for p in providers]}")
     return LLMManager(providers)
 
