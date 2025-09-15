@@ -6,6 +6,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'react-hot-toast';
+import './CodeBlock.css';
 
 const MessageRenderer = ({ message }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -179,12 +180,13 @@ const MessageRenderer = ({ message }) => {
 
                   return (
                     <div className={`code-block-wrapper ${isDark ? 'dark' : 'light'}`} style={{
-                      margin: '20px 0',
-                      borderRadius: '12px',
+                      margin: '24px 0',
+                      borderRadius: '8px',
                       overflow: 'hidden',
-                      background: isDark ? '#1e1e1e' : '#f6f8fa',
-                      border: `1px solid ${isDark ? '#2d2d30' : '#d1d5db'}`,
-                      position: 'relative'
+                      background: isDark ? '#0d1117' : '#f6f8fa',
+                      border: `1px solid ${isDark ? '#21262d' : '#d0d7de'}`,
+                      position: 'relative',
+                      boxShadow: isDark ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 3px rgba(0,0,0,0.1)'
                     }}>
                       {/* Language Label */}
                       <div className="code-language-label" style={{
@@ -192,15 +194,16 @@ const MessageRenderer = ({ message }) => {
                         top: '12px',
                         left: '16px',
                         zIndex: 2,
-                        background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                        color: isDark ? '#858585' : '#6e6e6e',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                        background: isDark ? '#21262d' : 'rgba(175,184,193,0.2)',
+                        color: isDark ? '#7d8590' : '#656d76',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
                         fontWeight: '500',
-                        textTransform: 'lowercase',
+                        textTransform: 'uppercase',
                         letterSpacing: '0.5px',
-                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace",
+                        border: `1px solid ${isDark ? '#30363d' : 'rgba(175,184,193,0.3)'}`
                       }}>
                         {language}
                       </div>
@@ -220,11 +223,11 @@ const MessageRenderer = ({ message }) => {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          padding: '5px 10px',
-                          background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                          border: 'none',
+                          padding: '6px 12px',
+                          background: isDark ? '#21262d' : 'rgba(175,184,193,0.2)',
+                          border: `1px solid ${isDark ? '#30363d' : 'rgba(175,184,193,0.3)'}`,
                           borderRadius: '6px',
-                          color: isDark ? '#cccccc' : '#424242',
+                          color: isDark ? '#e6edf3' : '#24292f',
                           fontSize: '12px',
                           fontWeight: '500',
                           cursor: 'pointer',
@@ -232,10 +235,12 @@ const MessageRenderer = ({ message }) => {
                           fontFamily: 'system-ui, -apple-system, sans-serif'
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.background = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+                          e.target.style.background = isDark ? '#30363d' : 'rgba(175,184,193,0.3)';
+                          e.target.style.transform = 'translateY(-1px)';
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+                          e.target.style.background = isDark ? '#21262d' : 'rgba(175,184,193,0.2)';
+                          e.target.style.transform = 'translateY(0)';
                         }}
                         title="Copy code"
                       >
@@ -244,33 +249,66 @@ const MessageRenderer = ({ message }) => {
                       </button>
 
                       <div className="code-content-area" style={{
-                        padding: '48px 20px 20px 20px',
+                        padding: '52px 0 0 0',
                         overflow: 'auto',
-                        maxHeight: '600px'
+                        maxHeight: '500px',
+                        position: 'relative'
                       }}>
                         <SyntaxHighlighter
                           style={isDark ? vscDarkPlus : oneLight}
                           language={language}
                           PreTag="pre"
-                          showLineNumbers={false}
+                          showLineNumbers={true}
+                          lineNumberStyle={{
+                            color: isDark ? '#6e7681' : '#8b949e',
+                            paddingRight: '16px',
+                            marginRight: '16px',
+                            borderRight: `1px solid ${isDark ? '#30363d' : '#d8dee4'}`,
+                            textAlign: 'right',
+                            minWidth: '2em',
+                            userSelect: 'none'
+                          }}
                           customStyle={{
                             margin: 0,
-                            padding: '16px',
-                            background: isDark ? '#1e1e1e' : '#f6f8fa',
-                            fontSize: '14px',
-                            lineHeight: '1.6',
-                            fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                            padding: '20px',
+                            background: isDark ? '#0d1117' : '#f6f8fa',
+                            fontSize: '13px',
+                            lineHeight: '1.45',
+                            fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
                             borderRadius: '0',
                             border: 'none',
-                            overflow: 'visible'
+                            overflow: 'auto',
+                            whiteSpace: 'pre',
+                            wordSpacing: 'normal',
+                            wordBreak: 'normal',
+                            wordWrap: 'normal',
+                            tabSize: 2,
+                            WebkitHyphens: 'none',
+                            MozHyphens: 'none',
+                            msHyphens: 'none',
+                            hyphens: 'none',
+                            fontVariantLigatures: 'common-ligatures'
                           }}
                           codeTagProps={{
                             style: {
-                              fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
-                              fontSize: '14px',
-                              lineHeight: '1.6'
+                              fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+                              fontSize: '13px',
+                              lineHeight: '1.45',
+                              whiteSpace: 'pre',
+                              wordSpacing: 'normal',
+                              wordBreak: 'normal',
+                              wordWrap: 'normal',
+                              tabSize: 2,
+                              WebkitHyphens: 'none',
+                              MozHyphens: 'none',
+                              msHyphens: 'none',
+                              hyphens: 'none',
+                              display: 'block',
+                              overflow: 'visible'
                             }
                           }}
+                          wrapLines={false}
+                          wrapLongLines={false}
                           {...props}
                         >
                           {codeString}
@@ -282,15 +320,16 @@ const MessageRenderer = ({ message }) => {
                 return (
                   <code
                     style={{
-                      background: isDark ? 'rgba(110, 118, 129, 0.4)' : 'rgba(175, 184, 193, 0.2)',
-                      color: isDark ? '#e5e5e5' : '#1f2937',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontSize: '0.875em',
-                      fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, Monaco, 'Liberation Mono', 'Courier New', monospace",
-                      fontWeight: '500',
-                      border: `1px solid ${isDark ? 'rgba(110, 118, 129, 0.3)' : 'rgba(175, 184, 193, 0.3)'}`,
-                      whiteSpace: 'nowrap'
+                      background: isDark ? 'rgba(110, 118, 129, 0.2)' : 'rgba(175, 184, 193, 0.15)',
+                      color: isDark ? '#e6edf3' : '#24292f',
+                      padding: '3px 6px',
+                      borderRadius: '6px',
+                      fontSize: '0.9em',
+                      fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+                      fontWeight: '600',
+                      border: `1px solid ${isDark ? 'rgba(110, 118, 129, 0.3)' : 'rgba(175, 184, 193, 0.25)'}`,
+                      whiteSpace: 'nowrap',
+                      fontVariantLigatures: 'common-ligatures'
                     }}
                     {...props}
                   >
