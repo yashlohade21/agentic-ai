@@ -35,7 +35,12 @@ const ChatSidebar = ({
       const userId = user?.uid || user?.id;
       console.log('Testing API with user ID:', userId);
       
-      const response = await fetch(`http://localhost:5000/api/chats/user/${userId}`, {
+      const API_BASE_URL = import.meta.env.VITE_API_URL ||
+        (window.location.hostname.includes('vercel.app') ?
+          'https://ai-agent-with-frontend.onrender.com' :
+          'http://localhost:5000');
+
+      const response = await fetch(`${API_BASE_URL}/api/chats/user/${userId}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'

@@ -1,4 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (window.location.hostname.includes('vercel.app') ?
+    'https://ai-agent-with-frontend.onrender.com' :
+    'http://localhost:5000');
 
 class DeepLearningService {
     constructor() {
