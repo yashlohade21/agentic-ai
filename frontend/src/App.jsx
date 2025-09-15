@@ -108,10 +108,23 @@ function App() {
 
   const checkAuthStatus = async () => {
     try {
+      // First check localStorage for cached auth
+      const cachedUser = localStorage.getItem('user');
+      const cachedAuth = localStorage.getItem('isAuthenticated');
+
+      if (cachedUser && cachedAuth === 'true') {
+        setUser(JSON.parse(cachedUser));
+        setIsAuthenticated(true);
+      }
+
+      // Then verify with backend
       const authStatus = await agentApi.checkAuth();
       if (authStatus.authenticated) {
         setUser(authStatus.user);
         setIsAuthenticated(true);
+        // Update localStorage with fresh data
+        localStorage.setItem('user', JSON.stringify(authStatus.user));
+        localStorage.setItem('isAuthenticated', 'true');
       } else {
         // Handle different reasons for not being authenticated
         if (authStatus.reason === 'session_expired') {
@@ -120,13 +133,25 @@ function App() {
             duration: 4000,
           });
         }
+        // Clear localStorage if session is invalid
+        localStorage.removeItem('user');
+        localStorage.removeItem('isAuthenticated');
         setUser(null);
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.log('Auth check failed:', error);
-      setUser(null);
-      setIsAuthenticated(false);
+      console.log('Auth check failed, using cached auth:', error);
+      // If backend is down, use cached auth
+      const cachedUser = localStorage.getItem('user');
+      const cachedAuth = localStorage.getItem('isAuthenticated');
+
+      if (cachedUser && cachedAuth === 'true') {
+        setUser(JSON.parse(cachedUser));
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -160,6 +185,11 @@ function App() {
       const response = await agentApi.login(credentials);
       setUser(response.user);
       setIsAuthenticated(true);
+
+      // Store auth data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('isAuthenticated', 'true');
+
       toast.success(`Welcome back, ${response.user.username}!`, {
         icon: '👋',
         duration: 3000,
@@ -175,6 +205,11 @@ function App() {
       const response = await agentApi.register(userData);
       setUser(response.user);
       setIsAuthenticated(true);
+
+      // Store auth data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('isAuthenticated', 'true');
+
       toast.success(`Welcome to BinaryBrained, ${response.user.username}!`, {
         icon: '🎉',
         duration: 4000,
@@ -196,7 +231,11 @@ function App() {
       setSystemStatus({ status: 'inactive', agents: [], session_requests: 0 });
       setActiveAgents([]);
       setCurrentView('chat');
-      
+
+      // Clear localStorage
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+
       toast.success('Logged out successfully', {
         icon: '👋',
         duration: 2000,
@@ -211,7 +250,11 @@ function App() {
       setSystemStatus({ status: 'inactive', agents: [], session_requests: 0 });
       setActiveAgents([]);
       setCurrentView('chat');
-      
+
+      // Clear localStorage
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+
       toast.error('Logout completed (with errors)', {
         icon: '⚠️',
         duration: 3000,

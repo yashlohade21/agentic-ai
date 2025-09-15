@@ -34,18 +34,23 @@ def create_app():
     
     # Session cookie settings - different for development vs production
     is_production = os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER')
-    
+
     if is_production:
-        # Production settings for HTTPS deployment
+        # Production settings for HTTPS deployment with cross-origin support
         app.config['SESSION_COOKIE_SECURE'] = True
         app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+        app.config['SESSION_COOKIE_NAME'] = 'binarybrained_session'
+        app.config['SESSION_COOKIE_PATH'] = '/'
     else:
         # Development settings for HTTP
         app.config['SESSION_COOKIE_SECURE'] = False
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    
+        app.config['SESSION_COOKIE_NAME'] = 'binarybrained_session'
+        app.config['SESSION_COOKIE_PATH'] = '/'
+
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_DOMAIN'] = None
+    app.config['SESSION_REFRESH_EACH_REQUEST'] = False  # Prevent session from refreshing on every request
     
     # File upload settings
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
