@@ -5,45 +5,45 @@ gunicorn==21.2.0
 Werkzeug==2.3.7
 
 # HTTP and utilities
-requests==2.31.0
-aiohttp==3.9.1
+requests>=2.31.0
+aiohttp>=3.9.1
 
 # Data validation and models
-pydantic==2.5.0
-
-# Authentication and security
-Werkzeug==2.3.7  # For password hashing
+pydantic>=2.7.0
 
 # Firebase (database)
-firebase-admin==6.4.0
+firebase-admin>=6.4.0
 
 # Image processing
-Pillow==10.1.0
-opencv-python==4.8.1.78
+Pillow>=10.1.0
+opencv-python>=4.8.1.78
 
 # PDF processing
-PyPDF2==3.0.1
-PyMuPDF==1.23.14
+PyPDF2>=3.0.1
+PyMuPDF>=1.23.14
 
 # OCR (optional)
-pytesseract==0.3.10
+pytesseract>=0.3.10
 
 # Scientific computing
-numpy==1.24.3
+numpy>=1.24.0,<2.0.0
 
 # Async file operations
-aiofiles==23.2.0
-
-# Machine Learning (optional - uncomment if needed)
-# torch==2.1.2
-# tensorflow==2.15.0
-# transformers==4.36.2
+aiofiles>=23.2.0
 
 # Environment and configuration
-python-dotenv==1.0.0
+python-dotenv>=1.0.0
 
-# Concurrent processing
-concurrent-futures==3.1.1
+# Machine Learning (optional - uncomment if needed)
+# torch>=2.1.2
+# tensorflow>=2.15.0
+# transformers>=4.36.2
+
+# Additional dependencies that might be needed
+# For LLM integrations (optional)
+# openai>=1.0.0
+# anthropic>=0.7.0
+# google-generativeai>=0.3.0
 
 # Date and time utilities (built-in datetime used)
 # Standard library modules used: os, logging, json, functools, re, datetime, time
