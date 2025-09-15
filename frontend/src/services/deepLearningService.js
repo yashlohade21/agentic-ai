@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
 
 class DeepLearningService {
     constructor() {
-        this.baseURL = `${API_BASE_URL}/api/dl`;
+        this.baseURL = `${API_BASE_URL.replace(/\/$/, '')}/api/dl`;
     }
 
     async makeRequest(endpoint, data = null, method = 'GET') {

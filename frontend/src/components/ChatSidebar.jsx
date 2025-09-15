@@ -40,7 +40,7 @@ const ChatSidebar = ({
           'https://ai-agent-with-frontend.onrender.com' :
           'http://localhost:5000');
 
-      const response = await fetch(`${API_BASE_URL}/api/chats/user/${userId}`, {
+      const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/chats/user/${userId}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'

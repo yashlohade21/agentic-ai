@@ -26,7 +26,7 @@ console.log('Using API URL:', API_BASE_URL);
       
 // Create optimized axios instance with dynamic timeout and retry logic
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL + '/', // Add trailing slash to prevent double slashes in URLs
   timeout: 60000, // Increased timeout for chat requests (60 seconds)
   headers: {
     'Content-Type': 'application/json',
