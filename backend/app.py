@@ -60,14 +60,8 @@ def create_app():
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173"
     ]
-    
-    CORS(app, resources={r"/*": {
-        "origins": allowed_origins,
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-        "expose_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True,
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-    }})
+
+    # Remove Flask-CORS to avoid conflicts - we'll handle CORS manually
 
 
     
@@ -99,9 +93,22 @@ def create_app():
             response.headers.add('Access-Control-Max-Age', '86400')
             return response
 
+    # Add CORS headers to all responses
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+
+        # Add CORS headers to all responses if origin is allowed
+        if origin in allowed_origins:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
+
+        return response
+
     # Health check endpoint
     @app.route('/api/health')
-    @cross_origin()
     def health_check():
         return jsonify({
             'status': 'ok',

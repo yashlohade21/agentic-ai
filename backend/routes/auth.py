@@ -44,7 +44,6 @@ def validate_password(password):
     return True, "Password is valid"
 
 @auth_bp.route('/register', methods=['POST', 'OPTIONS'])
-@cross_origin()
 def register():
     """Register a new user"""
     try:
@@ -124,7 +123,6 @@ def register():
         return jsonify({'error': f'Registration failed: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST', 'OPTIONS'])
-@cross_origin()
 def login():
     """Login user"""
     try:
@@ -173,7 +171,6 @@ def login():
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
 @auth_bp.route('/logout', methods=['POST', 'OPTIONS'])
-@cross_origin()
 def logout():
     """Logout user"""
     try:
@@ -215,7 +212,6 @@ def debug_session():
     return jsonify(dict(session)), 200
 
 @auth_bp.route('/check-auth', methods=['GET', 'OPTIONS'])
-@cross_origin()
 def check_auth():
     """Super fast auth check with caching and optimized session handling"""
     try:
