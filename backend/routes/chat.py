@@ -6,21 +6,55 @@ try:
     from firebase_config import db
 except:
     from firebase_config_mock import db
-# from main import BinarybrainedSystem  # Import your actual AI system
+# Import the LLM manager
+from core.llm_manager_fixed import create_llm_manager
+from core.config import settings
 
-# Minimal BinarybrainedSystem for deployment
+# BinarybrainedSystem using the LLM manager
 class BinarybrainedSystem:
     def __init__(self):
-        pass
+        self.llm_manager = None
+        self.system_prompt = """You are a helpful AI assistant. Provide clear, accurate, and helpful responses to user questions.
+        Be conversational, friendly, and professional. If you're unsure about something, say so honestly."""
 
     async def initialize(self):
-        pass
+        """Initialize the LLM manager with configured providers"""
+        try:
+            self.llm_manager = create_llm_manager(settings)
+            logging.info("LLM manager initialized successfully")
+        except Exception as e:
+            logging.error(f"Failed to initialize LLM manager: {e}")
+            raise
 
     async def process_request(self, message):
-        return {
-            "response": f"Echo: {message}",
-            "metadata": {"status": "minimal_mode"}
-        }
+        """Process user message using the LLM manager"""
+        try:
+            if not self.llm_manager:
+                await self.initialize()
+
+            # Generate response using LLM manager
+            response = await self.llm_manager.generate(
+                prompt=message,
+                system_prompt=self.system_prompt
+            )
+
+            # Get provider status for metadata
+            status = self.llm_manager.get_status()
+
+            return {
+                "response": response,
+                "metadata": {
+                    "status": "active",
+                    "provider_status": status
+                }
+            }
+        except Exception as e:
+            logging.error(f"Error processing request: {e}")
+            # Fallback response
+            return {
+                "response": "I apologize, but I'm having trouble processing your request. Please try again or check the system configuration.",
+                "metadata": {"status": "error", "error": str(e)}
+            }
 from routes.auth import require_auth
 
 # Configure logging
