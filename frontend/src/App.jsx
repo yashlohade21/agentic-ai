@@ -462,7 +462,7 @@ function App() {
             }}
           />
           <div className="loading-content">
-            <div style={{ marginBottom: '20px' }}>
+            <div className="loading-icon">
               <Bot size={48} color="#667eea" />
             </div>
             <h2>AI Business Assistant</h2>
