@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Bot, Copy, AlertCircle } from 'lucide-react';
+import { User, Bot, Copy, AlertCircle, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -10,48 +10,38 @@ import './CodeBlock.css';
 
 const MessageRenderer = ({ message }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [copiedStates, setCopiedStates] = useState({});
 
-  // Ensure content is properly displayed without truncation
-  React.useEffect(() => {
-    // Component mounted, message content will be fully rendered
-  }, [message]);
+  const isDark = document.documentElement.classList.contains('theme-dark') || 
+                document.body.classList.contains('theme-dark');
 
-  const handleCopy = async () => {
+  const handleCopy = async (text, id = 'message') => {
     try {
-      await navigator.clipboard.writeText(message.content);
+      await navigator.clipboard.writeText(text);
+      
+      // Update copy state for specific code block or message
+      setCopiedStates(prev => ({ ...prev, [id]: true }));
+      
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [id]: false }));
+      }, 2000);
+      
       toast.success('Copied!', { duration: 2000 });
     } catch (error) {
       toast.error('Failed to copy');
     }
   };
 
-  const isDark = document.documentElement.classList.contains('theme-dark') || 
-                document.body.classList.contains('theme-dark');
-
   if (message.type === 'user') {
     return (
-      <div className="message-wrapper" style={{
-        width: '100%',
-        marginBottom: '20px',
-        display: 'flex',
-        justifyContent: 'flex-end'
-      }}>
-        <div className="user-message" style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '12px 16px',
-          borderRadius: '16px',
-          maxWidth: '80%',
-          minWidth: '0',
-          fontSize: '15px',
-          lineHeight: '1.6',
-          boxShadow: '0 2px 12px rgba(102, 126, 234, 0.3)',
-          wordWrap: 'break-word',
-          overflowWrap: 'anywhere'
-        }}>
-          {message.content}
+      <div className="message-wrapper user">
+        <div className="user-message">
+          <div className="message-content">
+            {message.content}
+          </div>
+          <div className="message-avatar">
+            <User size={20} />
+          </div>
         </div>
       </div>
     );
@@ -59,13 +49,13 @@ const MessageRenderer = ({ message }) => {
 
   if (message.type === 'error') {
     return (
-      <div className="message-wrapper">
-        <div className="assistant-message">
+      <div className="message-wrapper error">
+        <div className="error-message">
           <div className="message-avatar">
             <AlertCircle size={20} />
           </div>
           <div className="message-content">
-            <div style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="error-content">
               <AlertCircle size={16} />
               {message.content}
             </div>
@@ -77,58 +67,22 @@ const MessageRenderer = ({ message }) => {
 
   return (
     <div
-      className="message-wrapper"
+      className="message-wrapper assistant"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{
-        width: '100%',
-        marginBottom: '20px',
-        padding: '0'
-      }}
     >
-      <div className="assistant-message" style={{
-        display: 'flex',
-        gap: '12px',
-        alignItems: 'flex-start',
-        width: '100%',
-        maxWidth: '100%'
-      }}>
-        <div
-          className="message-avatar"
-          style={{
-            width: '36px',
-            height: '36px',
-            minWidth: '36px',
-            minHeight: '36px',
-            borderRadius: '8px',
-            background: isDark
-              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
-            flexShrink: 0
-          }}
-        >
+      <div className="assistant-message">
+        <div className="message-avatar">
           <Bot size={20} />
         </div>
-        <div className="message-content" style={{
-          maxHeight: 'none',
-          overflow: 'visible',
-          display: 'block',
-          whiteSpace: 'normal'
-        }}>
+        <div className="message-content">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               code({ node, inline, className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || '');
-                // Fix for code content parsing
                 let codeString = '';
 
-                // Handle different types of children from ReactMarkdown
                 if (typeof children === 'string') {
                   codeString = children;
                 } else if (Array.isArray(children)) {
@@ -143,54 +97,41 @@ const MessageRenderer = ({ message }) => {
                   codeString = String(children || '');
                 }
 
-                // Clean up the code string
                 codeString = codeString.replace(/\n$/, '');
 
-                // Handle both specified language and unspecified code blocks
                 if (!inline && (match || codeString.includes('\n'))) {
-                  // Auto-detect language if not specified
                   let language = match ? match[1] : 'plaintext';
+                  const codeId = `code-${Math.random().toString(36).substr(2, 9)}`;
+                  const isCopied = copiedStates[codeId];
 
-                  // Language detection patterns
+                  // Language detection logic remains the same
                   if (!match) {
-                    // Try to detect JSON
                     if (codeString.trim().startsWith('{') || codeString.trim().startsWith('[')) {
                       try {
                         JSON.parse(codeString);
                         language = 'json';
                       } catch {
-                        // Check for JavaScript
                         if (codeString.includes('function') || codeString.includes('const') ||
                             codeString.includes('let') || codeString.includes('var') ||
                             codeString.includes('=>')) {
                           language = 'javascript';
                         }
                       }
-                    }
-                    // Detect Java
-                    else if (codeString.includes('public class') || codeString.includes('public static') ||
+                    } else if (codeString.includes('public class') || codeString.includes('public static') ||
                              codeString.includes('System.out') || codeString.includes('import java') ||
                              codeString.includes('package ')) {
                       language = 'java';
-                    }
-                    // Detect Python
-                    else if (codeString.includes('def ') || codeString.includes('import ') ||
+                    } else if (codeString.includes('def ') || codeString.includes('import ') ||
                              codeString.includes('from ') || codeString.includes('print(')) {
                       language = 'python';
-                    }
-                    // Detect HTML
-                    else if (codeString.includes('<!DOCTYPE') || codeString.includes('<html') ||
+                    } else if (codeString.includes('<!DOCTYPE') || codeString.includes('<html') ||
                              codeString.includes('<div') || codeString.includes('<body')) {
                       language = 'html';
-                    }
-                    // Detect CSS
-                    else if (codeString.includes('{') && (codeString.includes('color:') ||
+                    } else if (codeString.includes('{') && (codeString.includes('color:') ||
                              codeString.includes('background:') || codeString.includes('margin:') ||
                              codeString.includes('padding:'))) {
                       language = 'css';
-                    }
-                    // Detect SQL
-                    else if (codeString.toUpperCase().includes('SELECT') ||
+                    } else if (codeString.toUpperCase().includes('SELECT') ||
                              codeString.toUpperCase().includes('INSERT') ||
                              codeString.toUpperCase().includes('UPDATE')) {
                       language = 'sql';
@@ -198,81 +139,21 @@ const MessageRenderer = ({ message }) => {
                   }
 
                   return (
-                    <div className={`code-block-wrapper ${isDark ? 'dark' : 'light'}`} style={{
-                      margin: '24px 0',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      background: isDark ? '#0d1117' : '#f6f8fa',
-                      border: `1px solid ${isDark ? '#21262d' : '#d0d7de'}`,
-                      position: 'relative',
-                      boxShadow: isDark ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 3px rgba(0,0,0,0.1)'
-                    }}>
-                      {/* Language Label */}
-                      <div className="code-language-label" style={{
-                        position: 'absolute',
-                        top: '12px',
-                        left: '16px',
-                        zIndex: 2,
-                        background: isDark ? '#21262d' : 'rgba(175,184,193,0.2)',
-                        color: isDark ? '#7d8590' : '#656d76',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace",
-                        border: `1px solid ${isDark ? '#30363d' : 'rgba(175,184,193,0.3)'}`
-                      }}>
-                        {language}
+                    <div className={`code-block ${isDark ? 'dark' : 'light'}`}>
+                      <div className="code-header">
+                        <div className="code-language">
+                          {language}
+                        </div>
+                        <button
+                          className="code-copy-btn"
+                          onClick={() => handleCopy(codeString, codeId)}
+                          title=""
+                        >
+                          {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                          <span>{isCopied ? 'Copied!' : ''}</span>
+                        </button>
                       </div>
-
-                      {/* Copy Button */}
-                      <button
-                        className="code-copy-button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(codeString);
-                          toast.success('Copied!', { duration: 1500 });
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: '12px',
-                          right: '16px',
-                          zIndex: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          background: isDark ? '#21262d' : 'rgba(175,184,193,0.2)',
-                          border: `1px solid ${isDark ? '#30363d' : 'rgba(175,184,193,0.3)'}`,
-                          borderRadius: '6px',
-                          color: isDark ? '#e6edf3' : '#24292f',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          fontFamily: 'system-ui, -apple-system, sans-serif'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = isDark ? '#30363d' : 'rgba(175,184,193,0.3)';
-                          e.target.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = isDark ? '#21262d' : 'rgba(175,184,193,0.2)';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                        title="Copy code"
-                      >
-                        <Copy size={12} />
-                        <span>Copy code</span>
-                      </button>
-
-                      <div className="code-content-area" style={{
-                        padding: '52px 0 0 0',
-                        overflow: 'auto',
-                        maxHeight: '500px',
-                        position: 'relative'
-                      }}>
+                      <div className="code-content">
                         <SyntaxHighlighter
                           style={isDark ? vscDarkPlus : oneLight}
                           language={language}
@@ -284,13 +165,13 @@ const MessageRenderer = ({ message }) => {
                             marginRight: '16px',
                             borderRight: `1px solid ${isDark ? '#30363d' : '#d8dee4'}`,
                             textAlign: 'right',
-                            minWidth: '2em',
+                            minWidth: '3em',
                             userSelect: 'none'
                           }}
                           customStyle={{
                             margin: 0,
-                            padding: '20px',
-                            background: isDark ? '#0d1117' : '#f6f8fa',
+                            padding: '16px',
+                            background: 'transparent',
                             fontSize: '14px',
                             lineHeight: '1.6',
                             fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
@@ -301,13 +182,7 @@ const MessageRenderer = ({ message }) => {
                             wordSpacing: 'normal',
                             wordBreak: 'normal',
                             wordWrap: 'normal',
-                            overflowWrap: 'normal',
-                            tabSize: 4,
-                            WebkitHyphens: 'none',
-                            MozHyphens: 'none',
-                            msHyphens: 'none',
-                            hyphens: 'none',
-                            fontVariantLigatures: 'none'
+                            tabSize: 4
                           }}
                           codeTagProps={{
                             style: {
@@ -315,20 +190,10 @@ const MessageRenderer = ({ message }) => {
                               fontSize: '14px',
                               lineHeight: '1.6',
                               whiteSpace: 'pre',
-                              wordSpacing: 'normal',
-                              wordBreak: 'keep-all',
-                              wordWrap: 'break-word',
-                              overflowWrap: 'break-word',
-                              tabSize: 4,
-                              WebkitHyphens: 'none',
-                              MozHyphens: 'none',
-                              msHyphens: 'none',
-                              hyphens: 'none',
-                              display: 'block',
-                              overflow: 'visible'
+                              display: 'block'
                             }
                           }}
-                          wrapLines={false}
+                          wrapLines={true}
                           wrapLongLines={false}
                           {...props}
                         >
@@ -339,184 +204,39 @@ const MessageRenderer = ({ message }) => {
                   );
                 }
                 return (
-                  <code
-                    style={{
-                      background: isDark ? 'rgba(110, 118, 129, 0.2)' : 'rgba(175, 184, 193, 0.15)',
-                      color: isDark ? '#e6edf3' : '#24292f',
-                      padding: '3px 6px',
-                      borderRadius: '6px',
-                      fontSize: '0.9em',
-                      fontFamily: "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
-                      fontWeight: '600',
-                      border: `1px solid ${isDark ? 'rgba(110, 118, 129, 0.3)' : 'rgba(175, 184, 193, 0.25)'}`,
-                      whiteSpace: 'nowrap',
-                      fontVariantLigatures: 'common-ligatures'
-                    }}
-                    {...props}
-                  >
+                  <code className="inline-code" {...props}>
                     {children}
                   </code>
                 );
               },
-              p: ({ children }) => (
-                <p style={{
-                  margin: '12px 0',
-                  lineHeight: '1.7',
-                  color: isDark ? '#e5e5e5' : '#374151',
-                  fontSize: '15px'
-                }}>{children}</p>
-              ),
-              h1: ({ children }) => (
-                <h1 style={{
-                  margin: '24px 0 16px 0',
-                  fontSize: '1.6em',
-                  fontWeight: '700',
-                  color: isDark ? '#ffffff' : '#111827',
-                  lineHeight: '1.3',
-                  borderBottom: `2px solid ${isDark ? '#444654' : '#e5e7eb'}`,
-                  paddingBottom: '8px'
-                }}>{children}</h1>
-              ),
-              h2: ({ children }) => (
-                <h2 style={{
-                  margin: '20px 0 12px 0',
-                  fontSize: '1.4em',
-                  fontWeight: '600',
-                  color: isDark ? '#f3f4f6' : '#1f2937',
-                  lineHeight: '1.4'
-                }}>{children}</h2>
-              ),
-              h3: ({ children }) => (
-                <h3 style={{
-                  margin: '16px 0 8px 0',
-                  fontSize: '1.2em',
-                  fontWeight: '600',
-                  color: isDark ? '#e5e7eb' : '#374151',
-                  lineHeight: '1.5'
-                }}>{children}</h3>
-              ),
-              ul: ({ children }) => (
-                <ul style={{
-                  margin: '12px 0',
-                  paddingLeft: '24px',
-                  listStyleType: 'disc'
-                }}>{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol style={{
-                  margin: '12px 0',
-                  paddingLeft: '24px',
-                  listStyleType: 'decimal'
-                }}>{children}</ol>
-              ),
-              li: ({ children }) => (
-                <li style={{
-                  margin: '6px 0',
-                  lineHeight: '1.6',
-                  color: isDark ? '#e5e5e5' : '#374151'
-                }}>{children}</li>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote style={{
-                  borderLeft: `4px solid ${isDark ? '#667eea' : '#3b82f6'}`,
-                  paddingLeft: '20px',
-                  paddingTop: '12px',
-                  paddingBottom: '12px',
-                  margin: '16px 0',
-                  fontStyle: 'italic',
-                  background: isDark ? 'rgba(102, 126, 234, 0.05)' : 'rgba(59, 130, 246, 0.05)',
-                  color: isDark ? '#c5c5d2' : '#4b5563',
-                  borderRadius: '0 6px 6px 0',
-                  fontSize: '0.95em'
-                }}>
-                  {children}
-                </blockquote>
-              ),
+              p: ({ children }) => <p className="markdown-p">{children}</p>,
+              h1: ({ children }) => <h1 className="markdown-h1">{children}</h1>,
+              h2: ({ children }) => <h2 className="markdown-h2">{children}</h2>,
+              h3: ({ children }) => <h3 className="markdown-h3">{children}</h3>,
+              ul: ({ children }) => <ul className="markdown-ul">{children}</ul>,
+              ol: ({ children }) => <ol className="markdown-ol">{children}</ol>,
+              li: ({ children }) => <li className="markdown-li">{children}</li>,
+              blockquote: ({ children }) => <blockquote className="markdown-blockquote">{children}</blockquote>,
               table: ({ children }) => (
-                <div style={{
-                  overflowX: 'auto',
-                  margin: '16px 0',
-                  borderRadius: '8px',
-                  border: `1px solid ${isDark ? '#444654' : '#e5e7eb'}`,
-                  boxShadow: isDark ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.05)'
-                }}>
-                  <table style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    background: isDark ? '#343541' : '#ffffff'
-                  }}>
-                    {children}
-                  </table>
+                <div className="markdown-table-container">
+                  <table className="markdown-table">{children}</table>
                 </div>
               ),
-              th: ({ children }) => (
-                <th style={{
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  borderBottom: `2px solid ${isDark ? '#565869' : '#d1d5db'}`,
-                  background: isDark ? '#404040' : '#f9fafb',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  color: isDark ? '#e5e5e5' : '#374151'
-                }}>
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td style={{
-                  padding: '12px 16px',
-                  borderBottom: `1px solid ${isDark ? '#444654' : '#e5e7eb'}`,
-                  fontSize: '14px',
-                  color: isDark ? '#e5e5e5' : '#374151'
-                }}>
-                  {children}
-                </td>
-              ),
+              th: ({ children }) => <th className="markdown-th">{children}</th>,
+              td: ({ children }) => <td className="markdown-td">{children}</td>,
             }}
           >
             {message.content}
           </ReactMarkdown>
 
           {isHovered && (
-            <div style={{
-              marginTop: '16px',
-              paddingTop: '12px',
-              borderTop: `1px solid ${isDark ? '#444654' : '#e5e7eb'}`,
-              display: 'flex',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="message-actions">
               <button
-                onClick={handleCopy}
-                style={{
-                  background: isDark ? '#404040' : '#f8f9fa',
-                  border: `1px solid ${isDark ? '#565869' : '#d1d5db'}`,
-                  color: isDark ? '#e5e5e5' : '#374151',
-                  cursor: 'pointer',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                  boxShadow: isDark ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = isDark ? '#4a5568' : '#e2e8f0';
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = isDark ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = isDark ? '#404040' : '#f8f9fa';
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = isDark ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.1)';
-                }}
+                onClick={() => handleCopy(message.content)}
+                className="copy-message-btn"
                 title="Copy message"
               >
                 <Copy size={14} />
-                <span>Copy</span>
               </button>
             </div>
           )}
