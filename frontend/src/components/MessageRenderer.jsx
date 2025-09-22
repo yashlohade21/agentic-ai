@@ -34,13 +34,10 @@ const MessageRenderer = ({ message }) => {
 
   if (message.type === 'user') {
     return (
-      <div className="message-wrapper user">
+      <div className="message-wrapper user-wrapper">
         <div className="user-message">
           <div className="message-content">
             {message.content}
-          </div>
-          <div className="message-avatar">
-            <User size={20} />
           </div>
         </div>
       </div>
@@ -67,12 +64,12 @@ const MessageRenderer = ({ message }) => {
 
   return (
     <div
-      className="message-wrapper assistant"
+      className="message-wrapper assistant-wrapper"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="assistant-message">
-        <div className="message-avatar">
+        <div className="message-avatar assistant-avatar">
           <Bot size={20} />
         </div>
         <div className="message-content">
@@ -229,18 +226,18 @@ const MessageRenderer = ({ message }) => {
             {message.content}
           </ReactMarkdown>
 
-          {isHovered && (
-            <div className="message-actions">
-              <button
-                onClick={() => handleCopy(message.content)}
-                className="copy-message-btn"
-                title="Copy message"
-              >
-                <Copy size={14} />
-              </button>
-            </div>
-          )}
         </div>
+        {isHovered && (
+          <div className="message-actions">
+            <button
+              onClick={() => handleCopy(message.content)}
+              className="copy-message-btn"
+              title="Copy message"
+            >
+              <Copy size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import ChatSidebar from './components/ChatSidebar';
 import MessageRenderer from './components/MessageRenderer';
 import WelcomeMessage from './components/WelcomeMessage';
 import AgentStatus from './components/AgentStatus';
+import ChatInput from './components/ChatInput';
 import './Claude.css';
 
 function AppClaude() {
@@ -35,7 +36,6 @@ function AppClaude() {
   });
   
   const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
 
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
@@ -199,15 +199,15 @@ function AppClaude() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const sendMessage = async (attachedFiles = []) => {
+    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
 
     // Create chat if doesn't exist
     if (!currentChatId && user) {
       try {
         const newChat = await agentApi.createChat(
-          user.uid || user.id, 
-          inputValue.substring(0, 50)
+          user.uid || user.id,
+          inputValue.substring(0, 50) || 'New Chat'
         );
         setCurrentChatId(newChat.id);
       } catch (error) {
@@ -215,10 +215,20 @@ function AppClaude() {
       }
     }
 
+    // Prepare message content with files
+    let messageContent = inputValue;
+    if (attachedFiles.length > 0) {
+      const fileDescriptions = attachedFiles.map(file =>
+        `[Attached: ${file.original_name} (${file.file_type})]`
+      ).join('\n');
+      messageContent = messageContent ? `${messageContent}\n\n${fileDescriptions}` : fileDescriptions;
+    }
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
-      content: inputValue,
+      content: messageContent,
+      attachedFiles: attachedFiles,
       timestamp: new Date().toISOString()
     };
 
@@ -226,11 +236,6 @@ function AppClaude() {
     const currentInput = inputValue;
     setInputValue('');
     setIsLoading(true);
-
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
 
     try {
       const response = await agentApi.sendMessage(currentInput);
@@ -241,15 +246,15 @@ function AppClaude() {
         timestamp: new Date().toISOString(),
         metadata: response.metadata
       };
-      
+
       const updatedMessages = [...messages, userMessage, botMessage];
       setMessages(updatedMessages);
-      
+
       // Save chat with new messages
       if (currentChatId) {
         await agentApi.updateChat(currentChatId, updatedMessages);
       }
-      
+
     } catch (error) {
       const errorMessage = {
         id: Date.now() + 1,
@@ -264,19 +269,30 @@ function AppClaude() {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  const handleFileUpload = (file) => {
+    console.log('File uploaded:', file);
+    toast.success(`File uploaded: ${file.original_name}`);
   };
 
-  const handleTextareaChange = (e) => {
-    setInputValue(e.target.value);
-    // Auto-resize textarea
-    e.target.style.height = 'auto';
-    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+  const handleFileAnalyze = (file, analysis) => {
+    const botMessage = {
+      id: Date.now(),
+      type: 'assistant',
+      content: `**Analysis of ${file.original_name}:**\n\n${analysis}`,
+      timestamp: new Date().toISOString(),
+      metadata: {
+        analyzed_file: file.original_name,
+        file_type: file.file_type
+      }
+    };
+
+    setMessages(prev => [...prev, botMessage]);
+    toast.success('File analysis completed!', {
+      icon: '🔍',
+      duration: 3000,
+    });
   };
+
 
   const refreshSystem = async () => {
     setIsLoading(true);
@@ -446,29 +462,14 @@ function AppClaude() {
         </div>
         
         {/* Input Area */}
-        <div className="claude-input-area">
-          <div className="input-container">
-            <div className="input-wrapper">
-              <textarea
-                ref={textareaRef}
-                className="claude-textarea"
-                value={inputValue}
-                onChange={handleTextareaChange}
-                onKeyPress={handleKeyPress}
-                placeholder="Message AI Assistant..."
-                disabled={isLoading}
-                rows={1}
-              />
-              <button
-                className="send-button"
-                onClick={sendMessage}
-                disabled={!inputValue.trim() || isLoading}
-              >
-                <Send size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
+        <ChatInput
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          onSendMessage={sendMessage}
+          isLoading={isLoading}
+          onFileUpload={handleFileUpload}
+          onFileAnalyze={handleFileAnalyze}
+        />
       </main>
       
       {/* Settings Modal */}

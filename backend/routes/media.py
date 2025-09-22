@@ -292,64 +292,116 @@ def delete_file(file_id):
 @media_bp.route('/analyze', methods=['POST'])
 @require_auth
 def analyze_media():
-    """Analyze uploaded media and provide insights"""
+    """Analyze uploaded media using Groq AI"""
     try:
         data = request.get_json()
         file_id = data.get('file_id')
-        
+        user_prompt = data.get('prompt', 'Analyze this file and describe what you see.')
+
         if not file_id:
             return jsonify({'error': 'File ID required'}), 400
-        
+
         user_id = session.get('user_id', 'anonymous')
         user_upload_dir = os.path.join(UPLOAD_FOLDER, user_id)
-        
+
         # Find file
         target_file = None
         for filename in os.listdir(user_upload_dir):
             if filename.startswith(file_id):
                 target_file = filename
                 break
-        
+
         if not target_file:
             return jsonify({'error': 'File not found'}), 404
-        
+
         file_path = os.path.join(user_upload_dir, target_file)
         _, file_type = allowed_file(target_file)
-        
-        analysis = {'file_type': file_type, 'analysis': {}}
-        
-        # Basic analysis based on file type
-        if file_type == 'images' and PIL_AVAILABLE:
+
+        # Get LLM manager
+        from core.llm_manager_fixed import LLMManager
+        llm_manager = LLMManager()
+
+        analysis_result = None
+
+        if file_type == 'images':
+            # Analyze image using Groq vision model
+            import base64
             try:
-                with Image.open(file_path) as img:
-                    analysis['analysis'] = {
-                        'dimensions': f"{img.width}x{img.height}",
-                        'format': img.format,
-                        'mode': img.mode,
-                        'has_transparency': img.mode in ('RGBA', 'LA', 'P'),
-                        'estimated_colors': len(img.getcolors(maxcolors=256)) if img.getcolors(maxcolors=256) else 'Many'
-                    }
+                with open(file_path, 'rb') as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
+
+                # Use Groq vision model for image analysis
+                analysis_result = llm_manager.analyze_image_with_groq_sync(img_data, user_prompt)
+
             except Exception as e:
-                analysis['analysis']['error'] = f"Could not analyze image: {e}"
-        elif file_type == 'images' and not PIL_AVAILABLE:
-            analysis['analysis']['error'] = "Image analysis not available (PIL not installed)"
-        
-        elif file_type == 'documents':
-            # Basic document analysis
+                logger.error(f"Error analyzing image with Groq: {e}")
+                # Fallback to basic image analysis
+                if PIL_AVAILABLE:
+                    try:
+                        with Image.open(file_path) as img:
+                            analysis_result = f"Image Analysis: {img.width}x{img.height} pixels, format: {img.format}"
+                    except Exception as img_e:
+                        analysis_result = f"Could not analyze image: {img_e}"
+                else:
+                    analysis_result = "Image analysis not available"
+
+        elif file_type == 'documents' and target_file.endswith('.pdf'):
+            # Analyze PDF using Groq
             try:
-                file_size = os.path.getsize(file_path)
-                analysis['analysis'] = {
-                    'size_category': 'small' if file_size < 1024*1024 else 'large',
-                    'estimated_pages': max(1, file_size // (1024 * 2))  # Rough estimate
-                }
+                # Extract text from PDF
+                try:
+                    import PyPDF2
+                    pdf_text = ""
+                    with open(file_path, 'rb') as pdf_file:
+                        pdf_reader = PyPDF2.PdfReader(pdf_file)
+                        for page in pdf_reader.pages:
+                            pdf_text += page.extract_text() + "\n"
+                except ImportError:
+                    # Fallback if PyPDF2 is not available
+                    logger.warning("PyPDF2 not available, using basic PDF info")
+                    file_size = os.path.getsize(file_path)
+                    pdf_text = f"PDF document ({format_file_size(file_size)}) uploaded for analysis."
+
+                # Use Groq to analyze the PDF content
+                prompt = f"Analyze this PDF content and provide a summary:\n\n{pdf_text[:4000]}"  # Limit to avoid token limits
+                analysis_result = llm_manager.generate_response_sync(prompt, "You are an AI assistant specialized in document analysis. Provide clear, concise summaries and insights.")
+
             except Exception as e:
-                analysis['analysis']['error'] = f"Could not analyze document: {e}"
-        
-        return jsonify(analysis), 200
-        
+                logger.error(f"Error analyzing PDF with Groq: {e}")
+                try:
+                    file_size = os.path.getsize(file_path)
+                    analysis_result = f"PDF Analysis: File size {format_file_size(file_size)}, estimated {max(1, file_size // (1024 * 2))} pages"
+                except Exception as basic_e:
+                    analysis_result = f"Could not analyze PDF: {basic_e}"
+
+        elif file_type == 'documents' and target_file.endswith('.txt'):
+            # Analyze text files
+            try:
+                with open(file_path, 'r', encoding='utf-8') as txt_file:
+                    content = txt_file.read()
+
+                prompt = f"Analyze this text document:\n\n{content[:4000]}"
+                analysis_result = llm_manager.generate_response_sync(prompt, "You are an AI assistant specialized in text analysis. Provide insights about the content, structure, and key points.")
+
+            except Exception as e:
+                logger.error(f"Error analyzing text with Groq: {e}")
+                analysis_result = f"Could not analyze text file: {e}"
+
+        else:
+            analysis_result = f"File type '{file_type}' is not supported for AI analysis. Supported types: images (jpg, png, gif, etc.) and documents (pdf, txt)."
+
+        response = {
+            'success': True,
+            'file_type': file_type,
+            'analysis': analysis_result or "No analysis available for this file type.",
+            'file_name': target_file
+        }
+
+        return jsonify(response), 200
+
     except Exception as e:
         logger.error(f"Error analyzing media: {e}")
-        return jsonify({'error': 'Analysis failed'}), 500
+        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
 # Initialize upload directory on module import
 ensure_upload_directory()

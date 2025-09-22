@@ -117,8 +117,17 @@ function App() {
         setIsAuthenticated(true);
       }
 
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Auth check timeout')), 8000)
+      );
+
       // Then verify with backend
-      const authStatus = await agentApi.checkAuth();
+      const authStatus = await Promise.race([
+        agentApi.checkAuth(),
+        timeoutPromise
+      ]);
+
       if (authStatus.authenticated) {
         setUser(authStatus.user);
         setIsAuthenticated(true);
@@ -140,12 +149,13 @@ function App() {
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.log('Auth check failed, using cached auth:', error);
-      // If backend is down, use cached auth
+      console.log('Auth check failed:', error);
+      // If backend is down or timeout, proceed without auth
       const cachedUser = localStorage.getItem('user');
       const cachedAuth = localStorage.getItem('isAuthenticated');
 
       if (cachedUser && cachedAuth === 'true') {
+        console.log('Using cached auth due to network issues');
         setUser(JSON.parse(cachedUser));
         setIsAuthenticated(true);
       } else {
@@ -153,6 +163,7 @@ function App() {
         setIsAuthenticated(false);
       }
     } finally {
+      // Always set authLoading to false to prevent infinite loading
       setAuthLoading(false);
     }
   };
@@ -262,8 +273,8 @@ function App() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const sendMessage = async (attachedFiles = []) => {
+    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
 
     // Create a new chat if there isn't one
     let chatId = currentChatId;
@@ -278,10 +289,20 @@ function App() {
       }
     }
 
+    // Prepare message content with files
+    let messageContent = inputValue;
+    if (attachedFiles.length > 0) {
+      const fileDescriptions = attachedFiles.map(file =>
+        `[Attached: ${file.original_name} (${file.file_type})]`
+      ).join('\n');
+      messageContent = messageContent ? `${messageContent}\n\n${fileDescriptions}` : fileDescriptions;
+    }
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
-      content: inputValue,
+      content: messageContent,
+      attachedFiles: attachedFiles,
       timestamp: new Date()
     };
 
@@ -431,6 +452,31 @@ function App() {
     toast.success(`${darkMode ? 'Light' : 'Dark'} mode activated`, {
       icon: darkMode ? '☀️' : '🌙',
       duration: 2000,
+    });
+  };
+
+  const handleFileUpload = (file) => {
+    // File upload is handled by the ChatInput component
+    console.log('File uploaded:', file);
+  };
+
+  const handleFileAnalyze = (file, analysis) => {
+    // Add analysis result as a bot message
+    const botMessage = {
+      id: Date.now(),
+      type: 'bot',
+      content: `**Analysis of ${file.original_name}:**\n\n${analysis}`,
+      timestamp: new Date(),
+      metadata: {
+        analyzed_file: file.original_name,
+        file_type: file.file_type
+      }
+    };
+
+    setMessages(prev => [...prev, botMessage]);
+    toast.success('File analysis completed!', {
+      icon: '🔍',
+      duration: 3000,
     });
   };
 
@@ -667,32 +713,15 @@ function App() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="input-area">
-            <div className="input-container">
-              <div className="input-wrapper">
-                <textarea
-                  className="message-input"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Message AI Assistant..."
-                  rows={1}
-                  disabled={isLoading}
-                  onInput={(e) => {
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                  }}
-                />
-                <button
-                  className="send-btn"
-                  onClick={sendMessage}
-                  disabled={!inputValue.trim() || isLoading}
-                >
-                  <Send size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <ChatInput
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            onSendMessage={sendMessage}
+            isLoading={isLoading}
+            onKeyPress={handleKeyPress}
+            onFileUpload={handleFileUpload}
+            onFileAnalyze={handleFileAnalyze}
+          />
         </main>
 
         {/* Settings Panel */}

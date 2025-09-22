@@ -19,7 +19,7 @@ const ChatSidebar = ({
   const [chats, setChats] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false); // Start with false
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(true); // Start as loaded to prevent infinite loading
   const [error, setError] = useState(null);
   const [groupedChats, setGroupedChats] = useState({
     today: [],
@@ -73,26 +73,34 @@ const ChatSidebar = ({
 
   const loadChats = async () => {
     if (loading) return; // Prevent multiple simultaneous loads
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const userId = user?.uid || user?.id;
       if (!userId) {
-        console.error('No user ID available');
-        setError('User not authenticated');
+        console.log('No user ID available, skipping chat load');
         setChats([]);
         setLoading(false);
         setHasLoaded(true);
         return;
       }
-      
+
       console.log('Fetching chat history for user ID:', userId);
-      
-      const response = await agentApi.getChatHistory(userId);
+
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const response = await Promise.race([
+        agentApi.getChatHistory(userId),
+        timeoutPromise
+      ]);
+
       console.log('Chat history API response:', response);
-      
+
       if (response && response.chats) {
         console.log(`Loaded ${response.chats.length} chats`);
         setChats(response.chats);
@@ -111,41 +119,22 @@ const ChatSidebar = ({
       setHasLoaded(true);
     } catch (error) {
       console.error('Error loading chats:', error);
-      
-      // Try to provide some mock data for testing
-      if (process.env.NODE_ENV === 'development') {
-        const mockChats = [
-          {
-            id: 'mock-1',
-            title: 'Sample Chat 1',
-            preview: 'This is a sample chat for testing...',
-            lastUpdated: new Date().toISOString(),
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'mock-2',
-            title: 'Sample Chat 2',
-            preview: 'Another sample chat...',
-            lastUpdated: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-          }
-        ];
-        
-        console.log('Using mock data for development');
-        setChats(mockChats);
-        groupChatsByDate(mockChats);
-        setError(null);
-      } else {
-        setError(error.message || 'Failed to load chat history');
-        
-        // Don't show error toast on first load, only on refresh
-        if (hasLoaded) {
-          toast.error('Failed to load chat history');
-        }
-        
-        setChats([]);
+
+      // Always set empty chats and mark as loaded to prevent infinite loading
+      setChats([]);
+      setGroupedChats({
+        today: [],
+        yesterday: [],
+        thisWeek: [],
+        thisMonth: [],
+        older: []
+      });
+
+      // Only show error message if it's not a timeout or network issue
+      if (!error.message.includes('timeout') && !error.message.includes('network')) {
+        setError('Unable to load chat history');
       }
-      
+
       setHasLoaded(true);
     } finally {
       setLoading(false);

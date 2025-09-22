@@ -1,45 +1,48 @@
 import React from 'react';
 import { 
   Bot, Code, Search, FileText, Brain, MessageCircle, 
-  TrendingUp, BarChart3, Users, Briefcase, Sparkles
+  TrendingUp, BarChart3, Users, Briefcase, Sparkles,
+  Image, Upload, Camera, File
 } from 'lucide-react';
 
 const WelcomeMessage = ({ onExampleClick }) => {
   const quickStarters = [
     {
+      title: "📸 Upload & Analyze Images",
+      prompt: "Upload an image and I'll analyze it for you",
+      icon: Image,
+      gradient: "from-blue-500 to-cyan-500",
+      featured: true
+    },
+    {
+      title: "📄 Upload Documents & PDFs",
+      prompt: "Upload documents and I'll help you analyze them",
+      icon: File,
+      gradient: "from-emerald-500 to-teal-500",
+      featured: true
+    },
+    {
       title: "Code & Development",
       prompt: "Help me build a React component with TypeScript",
       icon: Code,
-      gradient: "from-blue-500 to-cyan-500"
+      gradient: "from-purple-500 to-indigo-500"
     },
     {
       title: "Data Analysis", 
       prompt: "Analyze this dataset and create visualizations",
       icon: BarChart3,
-      gradient: "from-emerald-500 to-teal-500"
+      gradient: "from-amber-500 to-orange-500"
     },
     {
       title: "Business Strategy",
       prompt: "Create a go-to-market strategy for my SaaS product",
       icon: Briefcase,
-      gradient: "from-purple-500 to-indigo-500"
+      gradient: "from-rose-500 to-pink-500"
     },
     {
       title: "Research & Writing",
       prompt: "Research market trends in artificial intelligence",
       icon: Search,
-      gradient: "from-amber-500 to-orange-500"
-    },
-    {
-      title: "Technical Documentation",
-      prompt: "Write API documentation for my REST endpoints",
-      icon: FileText,
-      gradient: "from-rose-500 to-pink-500"
-    },
-    {
-      title: "System Architecture",
-      prompt: "Design a scalable microservices architecture",
-      icon: Brain,
       gradient: "from-violet-500 to-purple-500"
     }
   ];
@@ -55,9 +58,27 @@ const WelcomeMessage = ({ onExampleClick }) => {
           How can I help you today?
         </h2>
         <p className="text-responsive-lg text-secondary max-w-2xl mx-auto">
-          I'm your AI assistant. I can help with coding, analysis, writing, research, and much more.
-          Choose from the examples below or ask me anything.
+          I'm your AI assistant with powerful media analysis capabilities. Upload images, documents, or PDFs for instant AI analysis, 
+          or ask me about coding, research, writing, and much more.
         </p>
+        
+        {/* Upload Feature Highlight */}
+        <div className="upload-feature-highlight">
+          <div className="upload-highlight-content">
+            <div className="upload-highlight-icons">
+              <div className="upload-highlight-icon">
+                <Camera size={20} />
+              </div>
+              <div className="upload-highlight-icon">
+                <Upload size={20} />
+              </div>
+            </div>
+            <div className="upload-highlight-text">
+              <strong>✨ New: AI-Powered File Analysis</strong>
+              <p>Click the 📎 or 📸 buttons below to upload and analyze your files instantly!</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Bento Grid Layout */}
@@ -67,7 +88,7 @@ const WelcomeMessage = ({ onExampleClick }) => {
           return (
             <div
               key={starter.title}
-              className="example-prompt group"
+              className={`example-prompt group ${starter.featured ? 'featured-prompt' : ''}`}
               onClick={() => onExampleClick(starter.prompt)}
               style={{
                 animationDelay: `${index * 100}ms`

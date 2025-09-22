@@ -496,6 +496,70 @@ class LLMManager:
             "success_rate": (self.success_count / self.request_count * 100) if self.request_count > 0 else 0
         }
 
+    def generate_response_sync(self, prompt: str, system_prompt: str = None) -> str:
+        """Synchronous wrapper for generate_response_async"""
+        try:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.generate_response_async(prompt, system_prompt))
+        except RuntimeError:
+            # If no event loop is running, create a new one
+            return asyncio.run(self.generate_response_async(prompt, system_prompt))
+
+    def analyze_image_with_groq_sync(self, image_data: str, prompt: str = "Describe what you see in this image.") -> str:
+        """Analyze image using Groq vision capabilities (synchronous)"""
+        try:
+            # Find BinaryBrained/Groq provider
+            groq_provider = None
+            for provider in self.providers:
+                if provider.name == "binarybrained" and provider.available:
+                    groq_provider = provider
+                    break
+
+            if not groq_provider:
+                return "Groq/BinaryBrained provider not available for image analysis."
+
+            # Use llava vision model for image analysis
+            payload = {
+                "model": "llama-3.2-11b-vision-preview",  # Groq's vision model
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_data}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "max_tokens": 1024,
+                "temperature": 0.7
+            }
+
+            response = requests.post(
+                groq_provider.api_url,
+                headers=groq_provider.headers,
+                json=payload,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return result['choices'][0]['message']['content']
+            else:
+                logger.error(f"Groq vision API error: {response.status_code} - {response.text}")
+                return f"Error analyzing image: {response.status_code}"
+
+        except Exception as e:
+            logger.error(f"Error in image analysis: {e}")
+            return f"Image analysis failed: {str(e)}"
+
 def create_llm_manager(config) -> LLMManager:
     """Factory function to create LLM manager with configured providers"""
     providers = []
