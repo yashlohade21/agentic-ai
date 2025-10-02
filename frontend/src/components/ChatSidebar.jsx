@@ -18,8 +18,8 @@ const ChatSidebar = ({
 }) => {
   const [chats, setChats] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false); // Start with false
-  const [hasLoaded, setHasLoaded] = useState(true); // Start as loaded to prevent infinite loading
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [groupedChats, setGroupedChats] = useState({
     today: [],
@@ -29,47 +29,31 @@ const ChatSidebar = ({
     older: []
   });
 
-  // Test function to check the API
-  const testAPI = async () => {
-    try {
-      const userId = user?.uid || user?.id;
-      console.log('Testing API with user ID:', userId);
-      
-      const API_BASE_URL = import.meta.env.VITE_API_URL ||
-        (window.location.hostname.includes('vercel.app') ?
-          'https://ai-agent-with-frontend.onrender.com' :
-          'http://localhost:5000');
-
-      const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/chats/user/${userId}`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('API Response status:', response.status);
-      const data = await response.json();
-      console.log('API Response data:', data);
-    } catch (error) {
-      console.error('Direct API test failed:', error);
-    }
-  };
+  // Debounce chat loading to prevent excessive API calls
+  const debounceTimeoutRef = React.useRef(null);
 
   useEffect(() => {
+    // Clear any pending debounced calls
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
     if (user && (user.uid || user.id)) {
-      console.log('User detected:', user);
-      console.log('Loading chats for user:', user.uid || user.id);
-      
-      // Test the API directly first
-      testAPI();
-      
-      loadChats();
+      // Debounce the loadChats call to prevent rapid-fire requests
+      debounceTimeoutRef.current = setTimeout(() => {
+        loadChats();
+      }, 300);
     } else {
-      console.log('No user found, cannot load chats');
       setLoading(false);
       setHasLoaded(true);
     }
-  }, [user, refreshTrigger]);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [user?.uid, user?.id, refreshTrigger]);
 
   const loadChats = async () => {
     if (loading) return; // Prevent multiple simultaneous loads
@@ -80,18 +64,15 @@ const ChatSidebar = ({
 
       const userId = user?.uid || user?.id;
       if (!userId) {
-        console.log('No user ID available, skipping chat load');
         setChats([]);
         setLoading(false);
         setHasLoaded(true);
         return;
       }
 
-      console.log('Fetching chat history for user ID:', userId);
-
-      // Add timeout to prevent infinite loading
+      // Shorter timeout for faster failure and fallback
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
       );
 
       const response = await Promise.race([
@@ -99,14 +80,10 @@ const ChatSidebar = ({
         timeoutPromise
       ]);
 
-      console.log('Chat history API response:', response);
-
       if (response && response.chats) {
-        console.log(`Loaded ${response.chats.length} chats`);
         setChats(response.chats);
         groupChatsByDate(response.chats);
       } else {
-        console.log('No chats found in response');
         setChats([]);
         setGroupedChats({
           today: [],
@@ -118,9 +95,7 @@ const ChatSidebar = ({
       }
       setHasLoaded(true);
     } catch (error) {
-      console.error('Error loading chats:', error);
-
-      // Always set empty chats and mark as loaded to prevent infinite loading
+      // Silent fail - just set empty state and continue
       setChats([]);
       setGroupedChats({
         today: [],
@@ -129,13 +104,12 @@ const ChatSidebar = ({
         thisMonth: [],
         older: []
       });
-
-      // Only show error message if it's not a timeout or network issue
-      if (!error.message.includes('timeout') && !error.message.includes('network')) {
-        setError('Unable to load chat history');
-      }
-
       setHasLoaded(true);
+
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error('Error loading chats:', error);
+      }
     } finally {
       setLoading(false);
     }

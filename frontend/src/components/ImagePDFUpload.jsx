@@ -39,20 +39,30 @@ const ImagePDFUpload = ({ onFileUpload, onClose, onAnalyze }) => {
     try {
       validateFile(file);
 
-      // Mock upload for now (when backend is not available)
-      const mockFile = {
-        id: Date.now() + Math.random(),
-        original_name: file.name,
-        file_type: file.type.includes('image') ? 'image' : 'pdf',
-        size_human: formatFileSize(file.size),
-        url: URL.createObjectURL(file),
-        mime_type: file.type
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:5001/api/media/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+
+      return {
+        id: result.file.id,
+        original_name: result.file.original_name,
+        file_type: result.file.file_type,
+        size_human: result.file.size_human,
+        url: `http://localhost:5001${result.file.url}`,
+        mime_type: result.file.mime_type
       };
-
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      return mockFile;
     } catch (error) {
       toast.error(error.message);
       throw error;
@@ -120,13 +130,37 @@ const ImagePDFUpload = ({ onFileUpload, onClose, onAnalyze }) => {
   };
 
   const analyzeFile = async (file) => {
-    if (!onAnalyze) return;
-
     setAnalyzing(true);
     try {
-      await onAnalyze(file);
-      toast.success(`Analysis completed for ${file.original_name}`);
+      const response = await fetch('http://localhost:5001/api/media/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          file_id: file.id,
+          prompt: 'Please analyze this image in detail. Describe what you see, including objects, people, colors, composition, and any text or important details.'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Analysis failed');
+      }
+
+      const result = await response.json();
+
+      // Call the parent onAnalyze callback with the analysis result
+      if (onAnalyze) {
+        await onAnalyze(file, result.analysis);
+      }
+
+      toast.success(`🔍 Analysis completed for ${file.original_name}!`, {
+        duration: 4000,
+      });
     } catch (error) {
+      console.error('Analysis error:', error);
       toast.error(`Analysis failed: ${error.message}`);
     } finally {
       setAnalyzing(false);

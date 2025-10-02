@@ -13,6 +13,14 @@ import os
 import logging
 from datetime import timedelta
 
+# Import caching if available (optional dependency)
+try:
+    from flask_caching import Cache
+    CACHING_AVAILABLE = True
+except ImportError:
+    CACHING_AVAILABLE = False
+    logging.warning("Flask-Caching not available, running without caching")
+
 def create_app():
     """Create and configure Flask application"""
     app = Flask(__name__)
@@ -56,13 +64,24 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
+    # Configure caching for performance (if available)
+    if CACHING_AVAILABLE:
+        app.config['CACHE_TYPE'] = 'SimpleCache'  # Use simple in-memory cache
+        app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # 5 minutes default
+        cache = Cache(app)
+        logging.info("Flask-Caching initialized")
+    else:
+        cache = None
+
     # CORS configuration with specific frontend domains
     allowed_origins = [
         "https://ai-agent-zeta-bice.vercel.app",  # Production frontend
         "http://localhost:3000",  # Local development
         "http://localhost:5173",  # Vite dev server
+        "http://localhost:5174",  # Vite dev server (alternate port)
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
     ]
 
     # Remove Flask-CORS to avoid conflicts - we'll handle CORS manually
@@ -78,7 +97,7 @@ def create_app():
     app.register_blueprint(dl_bp)
     
 
-    # Add explicit OPTIONS handler for all API routes
+    # Add explicit OPTIONS handler for all API routes with caching
     @app.before_request
     def handle_preflight():
         if request.method == "OPTIONS":
@@ -94,10 +113,12 @@ def create_app():
 
             response.headers['Access-Control-Allow-Headers'] = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
             response.headers['Access-Control-Allow-Methods'] = "GET,PUT,POST,DELETE,OPTIONS,PATCH"
+            # Cache preflight for 24 hours to reduce OPTIONS requests
             response.headers['Access-Control-Max-Age'] = '86400'
+            response.headers['Cache-Control'] = 'public, max-age=86400'
             return response
 
-    # Add CORS headers to all responses
+    # Add CORS headers and caching to all responses
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
@@ -109,12 +130,20 @@ def create_app():
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With,Accept,Origin'
             response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS,PATCH'
 
+        # Add performance headers for static content
+        if request.path.startswith('/static/') or request.path.endswith(('.js', '.css', '.png', '.jpg', '.ico')):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+
+        # Enable compression hint
+        if not response.headers.get('Content-Encoding'):
+            response.headers['Vary'] = 'Accept-Encoding'
+
         return response
 
-    # Health check endpoint
+    # Health check endpoint with caching
     @app.route('/api/health')
     def health_check():
-        return jsonify({
+        response = jsonify({
             'status': 'ok',
             'message': 'AI Agent API is running',
             'version': '2.0.0',
@@ -128,6 +157,9 @@ def create_app():
             'cors_enabled': True,
             'environment': os.getenv('FLASK_ENV', 'development')
         })
+        # Cache health check for 30 seconds
+        response.headers['Cache-Control'] = 'public, max-age=30'
+        return response
 
     # Simple ping endpoint for basic health check
     @app.route('/ping')

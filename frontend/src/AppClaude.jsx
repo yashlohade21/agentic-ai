@@ -1,16 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { 
+import {
   Bot, Menu, Settings, Sun, Moon, LogOut, Send, User, Plus, Search
 } from 'lucide-react';
 import { agentApi } from './api/agentApi';
-import AuthForm from './components/AuthForm';
-import ChatSidebar from './components/ChatSidebar';
-import MessageRenderer from './components/MessageRenderer';
-import WelcomeMessage from './components/WelcomeMessage';
-import AgentStatus from './components/AgentStatus';
-import ChatInput from './components/ChatInput';
 import './Claude.css';
+
+// Lazy load heavy components
+const AuthForm = lazy(() => import('./components/AuthForm'));
+const ChatSidebar = lazy(() => import('./components/ChatSidebar'));
+const MessageRenderer = lazy(() => import('./components/MessageRenderer'));
+const AgentStatus = lazy(() => import('./components/AgentStatus'));
+const ChatInput = lazy(() => import('./components/ChatInput'));
+
+// Simple loading placeholder
+const ComponentLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+    <div className="loading-spinner" />
+  </div>
+);
 
 function AppClaude() {
   // Auth State
@@ -70,10 +78,14 @@ function AppClaude() {
     }
   }, [darkMode]);
 
-  // Check backend connection when authenticated
+  // Check backend connection when authenticated (debounced)
   useEffect(() => {
     if (isAuthenticated) {
-      checkBackendConnection();
+      // Delay the connection check to not block initial render
+      const timer = setTimeout(() => {
+        checkBackendConnection();
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated]);
 
@@ -93,22 +105,26 @@ function AppClaude() {
 
   const checkBackendConnection = async () => {
     try {
+      // Use a timeout to fail fast if backend is slow
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
       const health = await agentApi.healthCheck();
+      clearTimeout(timeoutId);
+
       if (health.status === 'ok') {
         setConnectionStatus('connected');
-        const status = await agentApi.getSystemStatus();
-        setSystemStatus(status);
-        toast.success('Connected to AI system', {
-          icon: '🤖',
-          duration: 2000,
-        });
+        // Load system status in background, don't block
+        agentApi.getSystemStatus()
+          .then(status => setSystemStatus(status))
+          .catch(() => {}); // Silent fail for system status
       }
     } catch (error) {
       setConnectionStatus('mock');
-      toast.error('Using offline mode', {
-        icon: '⚠️',
-        duration: 3000,
-      });
+      // Don't show error toast on initial load - it's annoying
+      if (import.meta.env.DEV) {
+        console.warn('Backend connection failed, using offline mode');
+      }
     }
   };
 
@@ -321,12 +337,16 @@ function AppClaude() {
 
   // Auth screen
   if (!isAuthenticated) {
-    return <AuthForm onLogin={handleLogin} onRegister={handleRegister} isLoading={authLoading} />;
+    return (
+      <Suspense fallback={<div className="loading-state"><div className="loading-spinner" /><p>Loading...</p></div>}>
+        <AuthForm onLogin={handleLogin} onRegister={handleRegister} isLoading={authLoading} />
+      </Suspense>
+    );
   }
 
   return (
     <div className="claude-app">
-      <Toaster 
+      <Toaster
         position="top-center"
         toastOptions={{
           style: {
@@ -336,16 +356,18 @@ function AppClaude() {
           },
         }}
       />
-      
+
       {/* Sidebar */}
-      <ChatSidebar
-        currentChatId={currentChatId}
-        onChatSelect={handleChatSelect}
-        onNewChat={handleNewChat}
-        isCollapsed={!sidebarOpen}
-        onToggleCollapse={() => setSidebarOpen(!sidebarOpen)}
-        user={user}
-      />
+      <Suspense fallback={<ComponentLoader />}>
+        <ChatSidebar
+          currentChatId={currentChatId}
+          onChatSelect={handleChatSelect}
+          onNewChat={handleNewChat}
+          isCollapsed={!sidebarOpen}
+          onToggleCollapse={() => setSidebarOpen(!sidebarOpen)}
+          user={user}
+        />
+      </Suspense>
       
       {/* Main Chat Area */}
       <main className="claude-main">
@@ -436,7 +458,9 @@ function AppClaude() {
                       {message.type === 'user' ? <User size={16} /> : <Bot size={16} />}
                     </div>
                     <div className="message-content-wrapper">
-                      <MessageRenderer message={message} />
+                      <Suspense fallback={<div className="loading-spinner" />}>
+                        <MessageRenderer message={message} />
+                      </Suspense>
                     </div>
                   </div>
                 ))}
@@ -462,14 +486,16 @@ function AppClaude() {
         </div>
         
         {/* Input Area */}
-        <ChatInput
-          inputValue={inputValue}
-          setInputValue={setInputValue}
-          onSendMessage={sendMessage}
-          isLoading={isLoading}
-          onFileUpload={handleFileUpload}
-          onFileAnalyze={handleFileAnalyze}
-        />
+        <Suspense fallback={<ComponentLoader />}>
+          <ChatInput
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            onSendMessage={sendMessage}
+            isLoading={isLoading}
+            onFileUpload={handleFileUpload}
+            onFileAnalyze={handleFileAnalyze}
+          />
+        </Suspense>
       </main>
       
       {/* Settings Modal */}
@@ -486,17 +512,19 @@ function AppClaude() {
               </button>
             </div>
             <div className="settings-content">
-              <AgentStatus
-                systemStatus={systemStatus}
-                connectionStatus={connectionStatus}
-                user={user}
-                onRefresh={refreshSystem}
-                onClearHistory={handleNewChat}
-                onLogout={handleLogout}
-                onToggleDarkMode={() => setDarkMode(!darkMode)}
-                darkMode={darkMode}
-                isLoading={isLoading}
-              />
+              <Suspense fallback={<ComponentLoader />}>
+                <AgentStatus
+                  systemStatus={systemStatus}
+                  connectionStatus={connectionStatus}
+                  user={user}
+                  onRefresh={refreshSystem}
+                  onClearHistory={handleNewChat}
+                  onLogout={handleLogout}
+                  onToggleDarkMode={() => setDarkMode(!darkMode)}
+                  darkMode={darkMode}
+                  isLoading={isLoading}
+                />
+              </Suspense>
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@ const getApiUrl = () => {
 
   // If running on localhost, use local backend
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:5000';
+    return 'http://localhost:5001';
   }
 
   // If running on Vercel, use Render backend
