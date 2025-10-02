@@ -42,17 +42,32 @@ def create_app():
     # File upload settings
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
     
-    # CORS configuration
-    allowed_origins = [
+    # CORS configuration - allow all Vercel deployments
+    allowed_origins = os.getenv('ALLOWED_ORIGINS', '').split(',') if os.getenv('ALLOWED_ORIGINS') else [
         "https://ai-agent-zeta-bice.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173"
     ]
-    
+
+    # Add wildcard support for Vercel preview deployments
+    def check_origin(origin):
+        if not origin:
+            return False
+        # Allow localhost
+        if 'localhost' in origin or '127.0.0.1' in origin:
+            return True
+        # Allow configured origins
+        if origin in allowed_origins:
+            return True
+        # Allow any vercel.app domain
+        if '.vercel.app' in origin:
+            return True
+        return False
+
     CORS(app, resources={r"/*": {
-        "origins": allowed_origins,
+        "origins": lambda origin: check_origin(origin),
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True,
@@ -65,12 +80,12 @@ def create_app():
         if request.method == "OPTIONS":
             response = jsonify({})
             origin = request.headers.get('Origin')
-            if origin in allowed_origins:
+            if origin and check_origin(origin):
                 response.headers.add("Access-Control-Allow-Origin", origin)
-            response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With,Accept,Origin")
-            response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS,PATCH")
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Max-Age', '86400')
+                response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With,Accept,Origin")
+                response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS,PATCH")
+                response.headers.add('Access-Control-Allow-Credentials', 'true')
+                response.headers.add('Access-Control-Max-Age', '86400')
             return response
     
     # Routes

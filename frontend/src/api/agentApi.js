@@ -27,7 +27,7 @@ console.log('Using API URL:', API_BASE_URL);
 // Create optimized axios instance with dynamic timeout and retry logic
 const api = axios.create({
   baseURL: API_BASE_URL + '/', // Add trailing slash to prevent double slashes in URLs
-  timeout: 60000, // Increased timeout for chat requests (60 seconds)
+  timeout: 10000, // Faster timeout for quick failure (10 seconds)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -176,19 +176,20 @@ export const agentApi = {
       // Check local cache first for ultra-fast response
       const cacheKey = 'get:/api/auth/check-auth';
       const cached = requestCache.get(cacheKey);
-      
+
       if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
         return cached.data;
       }
-      
-      const response = await api.get('/api/auth/check-auth');
-      
+
+      // Use shorter timeout for auth check
+      const response = await api.get('/api/auth/check-auth', { timeout: 5000 });
+
       // Cache the response
       requestCache.set(cacheKey, {
         data: response.data,
         timestamp: Date.now()
       });
-      
+
       return response.data;
     } catch (error) {
       if (import.meta.env.DEV) {

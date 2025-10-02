@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback, useMemo } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import {
   Bot, Menu, Settings, Sun, Moon, LogOut, Send, User, Plus, Search
@@ -78,16 +78,8 @@ function AppClaude() {
     }
   }, [darkMode]);
 
-  // Check backend connection when authenticated (debounced)
-  useEffect(() => {
-    if (isAuthenticated) {
-      // Delay the connection check to not block initial render
-      const timer = setTimeout(() => {
-        checkBackendConnection();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated]);
+  // Check backend connection when authenticated (debounced) - REMOVED to improve performance
+  // The connection will be checked on first message send instead
 
   const checkAuthStatus = async () => {
     try {
@@ -128,7 +120,7 @@ function AppClaude() {
     }
   };
 
-  const handleLogin = async (credentials) => {
+  const handleLogin = useCallback(async (credentials) => {
     try {
       const response = await agentApi.login(credentials);
       setUser(response.user);
@@ -138,9 +130,9 @@ function AppClaude() {
     } catch (error) {
       throw error;
     }
-  };
+  }, []);
 
-  const handleRegister = async (userData) => {
+  const handleRegister = useCallback(async (userData) => {
     try {
       const response = await agentApi.register(userData);
       setUser(response.user);
@@ -150,9 +142,9 @@ function AppClaude() {
     } catch (error) {
       throw error;
     }
-  };
+  }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await agentApi.logout();
       setUser(null);
@@ -165,14 +157,14 @@ function AppClaude() {
       setUser(null);
       setIsAuthenticated(false);
     }
-  };
+  }, []);
 
-  const handleNewChat = async () => {
+  const handleNewChat = useCallback(async () => {
     // Save current chat if it has messages
     if (currentChatId && messages.length > 0) {
       await saveCurrentChat();
     }
-    
+
     // Create new chat
     try {
       const newChat = await agentApi.createChat(user.uid || user.id, 'New Chat');
@@ -186,7 +178,7 @@ function AppClaude() {
       setMessages([]);
       setInputValue('');
     }
-  };
+  }, [currentChatId, messages, user]);
 
   const handleChatSelect = async (chatId) => {
     // Save current chat before switching
@@ -310,7 +302,7 @@ function AppClaude() {
   };
 
 
-  const refreshSystem = async () => {
+  const refreshSystem = useCallback(async () => {
     setIsLoading(true);
     try {
       await checkBackendConnection();
@@ -320,7 +312,7 @@ function AppClaude() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Loading screen
   if (authLoading) {
